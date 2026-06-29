@@ -2,8 +2,12 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import InterventionForm from '@/components/intervention/intervention-form'
+import type { ArticleRow } from '@/app/actions/plan'
 import type { PhotoRow } from '@/app/actions/photos'
 import { getPhraseTemplates } from '@/app/actions/phrases'
+import { getBiocidesByType, getBiocidesByTypeRich } from '@/app/actions/biocides'
+import { getTechniciens } from '@/app/actions/techniciens'
+import { getDolibarrProducts } from '@/lib/dolibarr'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -13,15 +17,15 @@ export default async function InterventionPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: intervention }, { data: rawPostes }, { data: rawPhotos }, phraseTemplates] = await Promise.all([
+  const [{ data: intervention }, { data: rawArticles }, { data: rawPhotos }, phraseTemplates, biocideProducts, dolibarrProducts, biocideProductsRich, techniciens] = await Promise.all([
     supabase
       .from('interventions')
-      .select('id, reference, status, dolibarr_tiers_id, client_name, client_address, client_email, intervention_date, technician_name, type_intervention, synthese, biocides, plan_image_path, signature_data_url, signataire_nom')
+      .select('id, reference, status, dolibarr_tiers_id, client_name, client_address, client_email, intervention_date, technician_name, intervention_type, type_intervention, synthese, biocides, plan_image_path, signature_data_url, signataire_nom, extra_data, dolibarr_devis_ref, dolibarr_devis_status, dolibarr_facture_ref, dolibarr_lines')
       .eq('id', id)
       .single(),
     supabase
-      .from('postes')
-      .select('id, label, x, y, ordre, etat, consommation, traces, action')
+      .from('articles')
+      .select('id, label, x, y, ordre, article_type, releves, etat, consommation, traces, action')
       .eq('intervention_id', id)
       .order('ordre'),
     supabase
@@ -30,6 +34,10 @@ export default async function InterventionPage({ params }: Props) {
       .eq('intervention_id', id)
       .order('created_at'),
     getPhraseTemplates(),
+    getBiocidesByType(),
+    getDolibarrProducts(),
+    getBiocidesByTypeRich(),
+    getTechniciens(true),
   ])
 
   if (!intervention) notFound()
@@ -58,10 +66,14 @@ export default async function InterventionPage({ params }: Props) {
     <div className="max-w-2xl mx-auto px-4 py-6 pb-16">
       <InterventionForm
         intervention={intervention}
-        postes={rawPostes ?? []}
+        articles={(rawArticles ?? []) as ArticleRow[]}
         planUrl={planUrl}
         photos={photos}
         phraseTemplates={phraseTemplates}
+        biocideProducts={biocideProducts}
+        biocideProductsRich={biocideProductsRich}
+        dolibarrProducts={dolibarrProducts}
+        techniciens={techniciens.map(t => t.nom)}
       />
     </div>
   )

@@ -1,17 +1,47 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createInterventionFromSite } from '@/app/actions/create-from-site'
+import { getPortailTokensByTiers } from '@/app/actions/portail'
+import { getSiteInfo } from '@/app/actions/site-infos'
+import PortailLinkManager from '@/components/portail/portail-link-manager'
+import SiteInfoCard from '@/components/sites/site-info-card'
 
 type Severity = 'forte' | 'moderee' | 'inactive' | 'non-releve'
 
-function computeSeverity(postes: { consommation: string | null; traces: string | null }[]): Severity {
-  if (postes.length === 0) return 'non-releve'
-  const hasCritique = postes.some(p => p.consommation === 'Totale' || p.traces === 'Rongeurs')
-  if (hasCritique) return 'forte'
-  const hasModeree = postes.some(p => p.consommation === 'Partielle' || p.traces === 'Déjections')
-  if (hasModeree) return 'moderee'
-  return 'inactive'
+function computeSeverity(articles: { releves: Record<string, unknown> }[], interventionType?: string | null): Severity {
+  if (articles.length === 0) return 'non-releve'
+  switch (interventionType) {
+    case 'rats':
+      if (articles.some(a => a.releves.consommation === 'Totale' || a.releves.traces === 'Rongeurs')) return 'forte'
+      if (articles.some(a => a.releves.consommation === 'Partielle' || a.releves.traces === 'Déjections')) return 'moderee'
+      return 'inactive'
+    case 'frelons_guepes':
+      // Nid non neutralisé = encore actif
+      if (articles.some(a => a.releves.neutralise === false || a.releves.neutralise === 'false')) return 'forte'
+      return 'moderee' // présence confirmée, nid(s) traité(s)
+    case 'punaises_lit':
+    case 'cafards': {
+      const levels = articles.map(a => String(a.releves.infestation ?? '').toLowerCase())
+      if (levels.some(l => l.includes('élevée') || l.includes('elevee') || l.includes('forte') || l.includes('haut'))) return 'forte'
+      if (levels.some(l => l.includes('modérée') || l.includes('moderee') || l.includes('moyen'))) return 'moderee'
+      return 'moderee' // présence détectée et traitée
+    }
+    default:
+      // fourmis, moustiques, mixte : toute zone renseignée = présence
+      return 'moderee'
+  }
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  rats: 'Dératisation',
+  frelons_guepes: 'Frelons & Guêpes',
+  punaises_lit: 'Punaises de lit',
+  fourmis: 'Fourmis',
+  cafards: 'Cafards / Blattes',
+  moustiques: 'Moustiques',
+  mixte: 'Multi-nuisibles',
 }
 
 const SEVERITY_LABEL: Record<Severity, string> = {
@@ -59,7 +89,7 @@ export default async function SiteHistoryPage({
 
   const { data: interventions } = await supabase
     .from('interventions')
-    .select('id, reference, intervention_date, type_intervention, status, client_name, client_address, postes(consommation, traces)')
+    .select('id, reference, intervention_date, intervention_type, type_intervention, status, client_name, client_address')
     .eq('dolibarr_tiers_id', tiersIdNum)
     .order('intervention_date', { ascending: false })
 
@@ -67,20 +97,44 @@ export default async function SiteHistoryPage({
 
   const { client_name, client_address } = interventions[0]
 
+  // Fetch articles via admin client to bypass RLS subquery recursion
+  const ids = interventions.map(i => i.id)
+  const admin = createAdminClient()
+  const { data: allArticles } = await admin
+    .from('articles')
+    .select('intervention_id, releves')
+    .in('intervention_id', ids)
+
+  const articlesByIntervention = (allArticles ?? []).reduce<Record<string, { releves: Record<string, unknown> }[]>>(
+    (acc, a) => {
+      const key = a.intervention_id as string
+      if (!acc[key]) acc[key] = []
+      acc[key].push({ releves: (a.releves ?? {}) as Record<string, unknown> })
+      return acc
+    },
+    {}
+  )
+
   // Severity per intervention
-  const items = interventions.map(iv => ({
-    ...iv,
-    severity: computeSeverity(
-      (iv.postes as { consommation: string | null; traces: string | null }[]) ?? []
-    ),
-    postesCount: (iv.postes as unknown[]).length,
-  }))
+  const items = interventions.map(iv => {
+    const arts = articlesByIntervention[iv.id] ?? []
+    return {
+      ...iv,
+      severity: computeSeverity(arts, iv.intervention_type),
+      articlesCount: arts.length,
+    }
+  })
+
+  const [portailTokens, siteInfo] = await Promise.all([
+    getPortailTokensByTiers(tiersIdNum),
+    getSiteInfo(tiersIdNum),
+  ])
 
   // Server action bound to the most recent intervention
   const createFromLatest = createInterventionFromSite.bind(null, items[0].id)
 
   // Determine trend: last 2 interventions with postes
-  const withPostes = items.filter(i => i.postesCount > 0)
+  const withPostes = items.filter(i => i.articlesCount > 0)
   let trendLabel: string | null = null
   if (withPostes.length >= 2) {
     const [latest, prev] = withPostes
@@ -127,6 +181,18 @@ export default async function SiteHistoryPage({
         </div>
       </div>
 
+      {/* Fiche site */}
+      <SiteInfoCard tiersId={tiersIdNum} initial={siteInfo} />
+
+      {/* Portail client */}
+      <div className="mb-4">
+        <PortailLinkManager
+          tiersId={tiersIdNum}
+          clientName={client_name}
+          tokens={portailTokens}
+        />
+      </div>
+
       {/* Légende */}
       <div className="flex items-center gap-4 mb-4 flex-wrap">
         {(['forte', 'moderee', 'inactive', 'non-releve'] as Severity[]).map(s => (
@@ -166,9 +232,14 @@ export default async function SiteHistoryPage({
                   <div>
                     <div className="font-medium text-[13.5px] text-[#1c1917]">
                       {formatDate(iv.intervention_date)}
-                      {iv.type_intervention && (
+                      {iv.intervention_type && (
                         <span className="text-[#a8a29e] font-normal ml-1.5 text-[12px]">
-                          · {iv.type_intervention}
+                          · {TYPE_LABELS[iv.intervention_type] ?? iv.intervention_type}
+                        </span>
+                      )}
+                      {iv.type_intervention && (
+                        <span className="text-[#a8a29e] font-normal ml-1 text-[12px]">
+                          ({iv.type_intervention})
                         </span>
                       )}
                     </div>
@@ -182,8 +253,8 @@ export default async function SiteHistoryPage({
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${SEVERITY_CLASS[iv.severity]}`}>
                       {SEVERITY_LABEL[iv.severity]}
-                      {iv.postesCount > 0 && (
-                        <span className="font-normal ml-1 opacity-70">· {iv.postesCount} poste{iv.postesCount !== 1 ? 's' : ''}</span>
+                      {iv.articlesCount > 0 && (
+                        <span className="font-normal ml-1 opacity-70">· {iv.articlesCount} poste{iv.articlesCount !== 1 ? 's' : ''}</span>
                       )}
                     </span>
                     <svg className="w-3.5 h-3.5 text-[#a8a29e] group-hover:text-primary shrink-0 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

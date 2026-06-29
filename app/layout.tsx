@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from 'sonner'
+import PwaRegister from '@/components/pwa-register'
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +15,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Parasites Compagnie · Interventions",
+  title: "Parasites et Compagnie",
   description: "Logiciel de compte rendu d'intervention",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'P&C',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#c0392b',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -32,6 +46,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {children}
         <Toaster position="bottom-center" richColors closeButton />
+        <PwaRegister />
       </body>
     </html>
   );

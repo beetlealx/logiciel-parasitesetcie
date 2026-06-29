@@ -2,10 +2,16 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import type { InterventionType } from '@/lib/intervention-templates'
 
 export interface BiocideEntry {
   produit: string
   quantite: string
+  numero_amm?: string
+  substance_active?: string
+  zone_traitee?: string
+  mode_application?: string
+  delai_reentree?: string
 }
 
 export interface InterventionDraft {
@@ -18,6 +24,7 @@ export interface InterventionDraft {
   type_intervention: string
   synthese: string
   biocides: BiocideEntry[]
+  extra_data: Record<string, unknown>
 }
 
 export async function saveIntervention(id: string, data: InterventionDraft) {
@@ -37,6 +44,7 @@ export async function saveIntervention(id: string, data: InterventionDraft) {
       type_intervention: data.type_intervention || null,
       synthese: data.synthese || null,
       biocides: data.biocides,
+      extra_data: data.extra_data,
     })
     .eq('id', id)
     .eq('user_id', user.id)
@@ -45,7 +53,7 @@ export async function saveIntervention(id: string, data: InterventionDraft) {
   if (error) throw new Error('Sauvegarde échouée')
 }
 
-export async function createIntervention() {
+export async function createIntervention(intervention_type: InterventionType = 'rats') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -71,11 +79,12 @@ export async function createIntervention() {
       client_address: '',
       technician_name: 'Alex M.',
       status: 'draft',
+      intervention_type,
     })
     .select('id')
     .single()
 
-  if (error || !data) throw new Error("Impossible de créer l'intervention")
+  if (error || !data) return { error: error?.message ?? "Impossible de créer l'intervention" }
 
   redirect(`/interventions/${data.id}`)
 }

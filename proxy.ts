@@ -24,9 +24,22 @@ export async function proxy(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const { pathname } = request.nextUrl
+  const { pathname, searchParams } = request.nextUrl
 
-  if (!user && pathname !== '/login') {
+  // Redirect recovery links from /login to /reset-password
+  if (pathname === '/login') {
+    const token_hash = searchParams.get('token_hash')
+    const type = searchParams.get('type')
+    if (token_hash && type === 'recovery') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/reset-password'
+      return NextResponse.redirect(url)
+    }
+  }
+
+  const publicPaths = ['/login', '/reset-password', '/auth/callback', '/portail']
+  const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

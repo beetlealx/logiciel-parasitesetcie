@@ -16,8 +16,15 @@ import RelevesSection from '@/components/intervention/releves-section'
 import PhotosSection from '@/components/intervention/photos-section'
 import SyntheseSection from '@/components/intervention/synthese-section'
 import SignatureSection from '@/components/intervention/signature-section'
-import type { PosteRow, ReadingField } from '@/app/actions/plan'
-import { bulkResetReadings } from '@/app/actions/plan'
+import type { ArticleRow, ReadingField } from '@/app/actions/plan'
+import { bulkResetReadings, updateArticleReleves } from '@/app/actions/plan'
+import { INTERVENTION_TEMPLATES, type InterventionType } from '@/lib/intervention-templates'
+import EspeceSection from '@/components/intervention/espece-section'
+import CreateDolibarrDoc from '@/components/intervention/create-dolibarr-doc'
+import type { DolibarrProduct, DocLine } from '@/lib/dolibarr'
+import ConditionsInterventionSection from '@/components/intervention/conditions-intervention-section'
+import EtatInitialSection from '@/components/intervention/etat-initial-section'
+import ConsignesPostSection from '@/components/intervention/consignes-post-section'
 import type { PhotoRow } from '@/app/actions/photos'
 import type { PhraseTemplate } from '@/app/actions/phrases'
 
@@ -31,48 +38,68 @@ interface Intervention {
   client_email: string | null
   intervention_date: string
   technician_name: string
+  intervention_type: InterventionType
   type_intervention: string | null
   synthese: string | null
   biocides: BiocideEntry[] | null
   plan_image_path: string | null
   signature_data_url: string | null
   signataire_nom: string | null
+  extra_data: Record<string, unknown> | null
+  dolibarr_devis_ref: string | null
+  dolibarr_devis_status: number | null
+  dolibarr_facture_ref: string | null
+  dolibarr_lines: unknown[] | null
 }
 
 interface Props {
   intervention: Intervention
-  postes: PosteRow[]
+  articles: ArticleRow[]
   planUrl: string
   photos: PhotoRow[]
   phraseTemplates: PhraseTemplate[]
+  biocideProducts?: Record<string, string[]>
+  biocideProductsRich?: Record<string, import('@/app/actions/biocides').BiocideProduct[]>
+  dolibarrProducts?: DolibarrProduct[]
+  techniciens?: string[]
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type SendStatus = 'idle' | 'sending' | 'sent' | 'error'
 
-export default function InterventionForm({ intervention, postes: initialPostes, planUrl, photos, phraseTemplates }: Props) {
+export default function InterventionForm({ intervention, articles: initialArticles, planUrl, photos, phraseTemplates, biocideProducts, biocideProductsRich, dolibarrProducts, techniciens: techniciensList }: Props) {
   const router = useRouter()
   const isLocked = intervention.status !== 'draft'
   const isSigned = intervention.status === 'signed' || intervention.status === 'sent'
-  const [postes, setPostes] = useState<PosteRow[]>(initialPostes)
+  const [articles, setArticles] = useState<ArticleRow[]>(initialArticles)
   const [sendStatus, setSendStatus] = useState<SendStatus>('idle')
   const [sendFeedback, setSendFeedback] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
+  const [dolibarrModal, setDolibarrModal] = useState(false)
+  const [devisRef, setDevisRef] = useState(intervention.dolibarr_devis_ref)
+  const [devisStatus, setDevisStatus] = useState(intervention.dolibarr_devis_status ?? 0)
+  const [factureRef, setFactureRef] = useState(intervention.dolibarr_facture_ref)
 
-  const TECHS = ['Alex', 'Fabrice'] as const
+  const TECHS = techniciensList ?? ['Alex', 'Fabrice']
   const [customTech, setCustomTech] = useState(
-    () => intervention.technician_name !== '' && !(TECHS as readonly string[]).includes(intervention.technician_name)
+    () => intervention.technician_name !== '' && !TECHS.includes(intervention.technician_name)
   )
 
-  function handlePosteReadingChange(id: string, field: ReadingField, value: string | null) {
-    setPostes(ps => ps.map(p => p.id === id ? { ...p, [field]: value } : p))
+  function handleArticleReadingChange(id: string, field: ReadingField, value: string | null) {
+    setArticles(ps => ps.map(p => p.id === id ? { ...p, [field]: value } : p))
+  }
+
+  function handleArticleRelevesChange(id: string, releves: Record<string, unknown>) {
+    setArticles(ps => ps.map(p => p.id === id ? { ...p, releves } : p))
+    updateArticleReleves(id, releves)
   }
 
   function handleResetAll() {
-    setPostes(ps => ps.map(p => ({ ...p, etat: 'Intact', consommation: 'Nulle', traces: 'Aucune', action: 'RAS' })))
-    bulkResetReadings(postes.map(p => p.id))
+    const resetReleves = { etat: 'Intact', consommation: 'Nulle', traces: 'Aucune', action: 'RAS' }
+    setArticles(ps => ps.map(p => ({ ...p, releves: resetReleves })))
+    bulkResetReadings(articles.map(p => p.id))
   }
   const STORAGE_KEY = `intervention-draft-${intervention.id}`
 
@@ -86,6 +113,7 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
     type_intervention: intervention.type_intervention ?? '',
     synthese: intervention.synthese ?? '',
     biocides: intervention.biocides ?? [],
+    extra_data: intervention.extra_data ?? {},
   })
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -195,6 +223,39 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
     sent: 'bg-[#d1f5ed] text-[#0a5e53]',
   }
 
+  const itype: InterventionType = intervention.intervention_type ?? 'rats'
+  const template = itype !== 'mixte' ? INTERVENTION_TEMPLATES[itype] : null
+  const showPlan = template?.showPlan ?? true
+  const articlesTitle = template?.articlesTitle ?? 'Postes'
+  const extraData = (form.extra_data ?? {}) as Record<string, unknown>
+
+  const ESPECES: Partial<Record<InterventionType, { label: string; img: string }[]>> = {
+    fourmis: [
+      { label: 'Fourmi noire', img: '/especes/fourmi-noire.jpg' },
+      { label: 'Fourmi charpentière', img: '/especes/fourmi-charpentiere.jpg' },
+      { label: 'Fourmi pharaon', img: '/especes/fourmi-pharaon.jpg' },
+      { label: 'Fourmi odorante', img: '/especes/fourmi-odorante.jpg' },
+      { label: 'Fourmi de jardin', img: '/especes/fourmi-jardin.jpg' },
+      { label: 'Autre', img: '' },
+    ],
+    frelons_guepes: [
+      { label: 'Frelon asiatique', img: '/especes/frelon-asiatique.jpg' },
+      { label: 'Frelon européen', img: '/especes/frelon-europeen.jpg' },
+      { label: 'Guêpe commune', img: '/especes/guepe-commune.jpg' },
+      { label: 'Guêpe germanique', img: '/especes/guepe-germanique.jpg' },
+      { label: 'Poliste', img: '/especes/poliste.jpg' },
+      { label: 'Autre', img: '' },
+    ],
+  }
+
+  function updateExtraData(key: string, val: unknown) {
+    update({ extra_data: { ...extraData, [key]: val } })
+  }
+
+  // Build ordered sections with auto-numbering
+  let sn = -1
+  const S = () => { sn++; return sn }
+
   return (
     <div className="space-y-5">
       {/* En-tête */}
@@ -265,17 +326,46 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
             {duplicating ? 'Duplication…' : 'Dupliquer'}
           </button>
           {isLocked && (
-            <a
-              href={`/api/pdf/${intervention.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 border border-[#d6d3d1] text-[#57534e] text-sm px-3 py-2.5 rounded-lg font-medium hover:bg-[#f5f5f4] transition-colors min-h-[44px]"
+            <>
+              <a
+                href={`/api/pdf/${intervention.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 border border-[#d6d3d1] text-[#57534e] text-sm px-3 py-2.5 rounded-lg font-medium hover:bg-[#f5f5f4] transition-colors min-h-[44px]"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                </svg>
+                Rapport
+              </a>
+              <a
+                href={`/api/attestation/${intervention.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 border border-[#d6d3d1] text-[#57534e] text-sm px-3 py-2.5 rounded-lg font-medium hover:bg-[#f5f5f4] transition-colors min-h-[44px]"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                </svg>
+                Attestation
+              </a>
+            </>
+          )}
+          {form.dolibarr_tiers_id && (
+            <button
+              type="button"
+              onClick={() => setDolibarrModal(true)}
+              className={`flex items-center gap-1.5 border text-sm px-3 py-2.5 rounded-lg font-medium transition-colors min-h-[44px] ${
+                factureRef
+                  ? 'border-[#0a5e53]/30 bg-[#d1f5ed] text-[#0a5e53] hover:bg-[#b8f0e2]'
+                  : devisRef
+                    ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                    : 'border-[#d6d3d1] text-[#57534e] hover:bg-[#f5f5f4]'
+              }`}
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
-              </svg>
-              PDF
-            </a>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              {factureRef ? `Facturé · ${factureRef}` : devisRef ? `Devis · ${devisRef}` : 'Devis / Facture'}
+            </button>
           )}
           {isSigned && (
             <div className="flex flex-col items-end gap-1">
@@ -322,8 +412,8 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
         </div>
       </div>
 
-      {/* Section 0 — Client */}
-      <FormSection number={0} title="Client">
+      {/* Section — Client */}
+      <FormSection number={S()} title="Client">
         <ClientSearch
           initialData={{
             dolibarr_tiers_id: form.dolibarr_tiers_id,
@@ -336,8 +426,8 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
         />
       </FormSection>
 
-      {/* Section 1 — Informations générales */}
-      <FormSection number={1} title="Informations générales">
+      {/* Section — Informations générales */}
+      <FormSection number={S()} title="Informations générales">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
@@ -384,61 +474,120 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
               />
             )}
           </div>
-          <div className="sm:col-span-2">
-            <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
-              Type d'intervention
-            </label>
-            <select
-              value={form.type_intervention}
-              onChange={e => update({ type_intervention: e.target.value })}
-              disabled={isLocked}
-              className="w-full px-3 py-2.5 border border-[#d6d3d1] rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 min-h-[44px] bg-white disabled:bg-[#f5f5f4] disabled:text-[#a8a29e]"
-            >
-              <option value="">— Sélectionner —</option>
-              <option value="Dératisation">Dératisation</option>
-              <option value="Désinsectisation">Désinsectisation</option>
-              <option value="Désinfection">Désinfection</option>
-              <option value="Traitement préventif">Traitement préventif</option>
-              <option value="Traitement curatif">Traitement curatif</option>
-              <option value="Autre">Autre</option>
-            </select>
-          </div>
+          {itype === 'rats' && (
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
+                Type d'intervention
+              </label>
+              <select
+                value={form.type_intervention}
+                onChange={e => update({ type_intervention: e.target.value })}
+                disabled={isLocked}
+                className="w-full px-3 py-2.5 border border-[#d6d3d1] rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 min-h-[44px] bg-white disabled:bg-[#f5f5f4] disabled:text-[#a8a29e]"
+              >
+                <option value="">— Sélectionner —</option>
+                <option value="Dératisation">Dératisation</option>
+                <option value="Désinsectisation">Désinsectisation</option>
+                <option value="Désinfection">Désinfection</option>
+                <option value="Traitement préventif">Traitement préventif</option>
+                <option value="Traitement curatif">Traitement curatif</option>
+                <option value="Autre">Autre</option>
+              </select>
+            </div>
+          )}
+          {ESPECES[itype] && (
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
+                Espèce identifiée
+              </label>
+              <EspeceSection
+                options={ESPECES[itype]!}
+                value={(extraData.espece as string) ?? ''}
+                onChange={v => updateExtraData('espece', v)}
+                disabled={isLocked}
+              />
+            </div>
+          )}
         </div>
       </FormSection>
 
-      {/* Section 2 — Plan d'implantation */}
-      <FormSection number={2} title="Plan d'implantation">
-        <PlanSection
-          interventionId={intervention.id}
-          postes={postes}
-          onPostesChange={setPostes}
-          initialPlanPath={intervention.plan_image_path}
-          initialPlanUrl={planUrl}
-          disabled={isLocked}
-        />
-      </FormSection>
+      {/* Section — État initial (punaises uniquement) */}
+      {itype === 'punaises_lit' && (
+        <FormSection number={S()} title="État initial du logement">
+          <EtatInitialSection
+            value={(extraData.etat_initial as Record<string, unknown>) ?? {}}
+            onChange={v => updateExtraData('etat_initial', v)}
+            disabled={isLocked}
+          />
+        </FormSection>
+      )}
 
-      {/* Section 3 — Relevés par poste */}
-      <FormSection number={3} title="Relevés par poste">
-        <RelevesSection
-          postes={postes}
-          onPosteReadingChange={handlePosteReadingChange}
-          onResetAll={handleResetAll}
-          disabled={isLocked}
-        />
-      </FormSection>
+      {/* Section — Conditions d'intervention (frelons uniquement) */}
+      {itype === 'frelons_guepes' && (
+        <FormSection number={S()} title="Conditions d'intervention">
+          <ConditionsInterventionSection
+            value={(extraData.conditions as Record<string, unknown>) ?? {}}
+            onChange={v => updateExtraData('conditions', v)}
+            disabled={isLocked}
+          />
+        </FormSection>
+      )}
 
-      {/* Section 4 — Biocides */}
-      <FormSection number={4} title="Produits biocides utilisés">
+      {/* Section — Plan d'implantation (si showPlan) */}
+      {showPlan && (
+        <FormSection number={S()} title={articlesTitle}>
+          <PlanSection
+            interventionId={intervention.id}
+            interventionType={itype}
+            articles={articles}
+            onArticlesChange={setArticles}
+            initialPlanPath={intervention.plan_image_path}
+            initialPlanUrl={planUrl}
+            disabled={isLocked}
+          />
+        </FormSection>
+      )}
+
+      {/* Section — Articles / Zones (si pas de plan) */}
+      {!showPlan && (
+        <FormSection number={S()} title={articlesTitle}>
+          <RelevesSection
+            interventionType={itype}
+            articles={articles}
+            onArticleRelevesChange={handleArticleRelevesChange}
+            onResetAll={handleResetAll}
+            disabled={isLocked}
+          />
+        </FormSection>
+      )}
+
+      {/* Section — Relevés (si plan présent, les relevés sont une section séparée) */}
+      {showPlan && (
+        <FormSection number={S()} title="Relevés">
+          <RelevesSection
+            interventionType={itype}
+            articles={articles}
+            onArticleRelevesChange={handleArticleRelevesChange}
+            onResetAll={handleResetAll}
+            disabled={isLocked}
+          />
+        </FormSection>
+      )}
+
+      {/* Section — Biocides */}
+      <FormSection number={S()} title="Produits biocides utilisés">
         <BiocidesSection
           value={form.biocides}
           onChange={v => update({ biocides: v })}
           disabled={isLocked}
+          interventionType={itype}
+          dbProduits={biocideProducts}
+          dbProduitsRich={biocideProductsRich}
         />
       </FormSection>
 
-      {/* Section 5 — Photos */}
-      <FormSection number={5} title="Photos">
+      {/* Section — Photos */}
+      <FormSection number={S()} title="Photos">
         <PhotosSection
           interventionId={intervention.id}
           initialPhotos={photos}
@@ -446,18 +595,31 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
         />
       </FormSection>
 
-      {/* Section 6 — Synthèse */}
-      <FormSection number={6} title="Synthèse">
+      {/* Section — Consignes post-traitement (punaises uniquement) */}
+      {itype === 'punaises_lit' && (
+        <FormSection number={S()} title="Consignes post-traitement">
+          <ConsignesPostSection
+            value={(extraData.consignes_post as Record<string, unknown>) ?? {}}
+            onChange={v => updateExtraData('consignes_post', v)}
+            disabled={isLocked}
+          />
+        </FormSection>
+      )}
+
+      {/* Section — Synthèse */}
+      <FormSection number={S()} title="Synthèse">
         <SyntheseSection
           value={form.synthese}
           onChange={v => update({ synthese: v })}
           phraseTemplates={phraseTemplates}
+          interventionType={itype}
+          espece={(extraData.espece as string) || undefined}
           disabled={isLocked}
         />
       </FormSection>
 
-      {/* Section 7 — Signature */}
-      <FormSection number={7} title="Signature">
+      {/* Section — Signature */}
+      <FormSection number={S()} title="Signature">
         <SignatureSection
           interventionId={intervention.id}
           initialSignatureUrl={intervention.signature_data_url}
@@ -466,11 +628,30 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
         />
       </FormSection>
 
-      {/* Planifier la prochaine visite — visible une fois l'intervention signée */}
       {isLocked && (
         <ScheduleNextVisit
           dolibarr_tiers_id={intervention.dolibarr_tiers_id}
           client_name={intervention.client_name}
+        />
+      )}
+
+      {dolibarrModal && (
+        <CreateDolibarrDoc
+          interventionId={intervention.id}
+          interventionType={itype}
+          clientName={intervention.client_name}
+          clientEmail={intervention.client_email}
+          interventionDate={intervention.intervention_date}
+          dolibarrProducts={dolibarrProducts ?? []}
+          savedLines={(intervention.dolibarr_lines as DocLine[] | null)}
+          devisRef={devisRef}
+          devisStatus={devisStatus}
+          factureRef={factureRef}
+          onClose={() => setDolibarrModal(false)}
+          onDevisSaved={ref => { setDevisRef(ref); setDevisStatus(0) }}
+          onDevisValidated={() => setDevisStatus(1)}
+          onDevisLinked={(ref, status) => { setDevisRef(ref); setDevisStatus(status >= 1 ? 1 : 0) }}
+          onFactureCreated={ref => { setFactureRef(ref); setDolibarrModal(false) }}
         />
       )}
     </div>

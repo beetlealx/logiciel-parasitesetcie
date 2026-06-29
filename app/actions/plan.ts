@@ -44,12 +44,15 @@ export async function getSignedPlanUrl(path: string): Promise<string> {
   return data?.signedUrl ?? ''
 }
 
-export interface PosteRow {
+export interface ArticleRow {
   id: string
   label: string
   x: number
   y: number
   ordre: number
+  article_type: string
+  releves: Record<string, unknown>
+  // Colonnes v1 conservées pour compatibilité (suppression en v3)
   etat: string | null
   consommation: string | null
   traces: string | null
@@ -58,62 +61,72 @@ export interface PosteRow {
 
 export type ReadingField = 'etat' | 'consommation' | 'traces' | 'action'
 
-export async function updatePosteReadings(
+export async function updateArticleReadings(
   id: string,
   field: ReadingField,
   value: string | null
 ): Promise<void> {
   const supabase = await createClient()
-  await supabase.from('postes').update({ [field]: value || null }).eq('id', id)
+  await supabase.from('articles').update({ [field]: value || null }).eq('id', id)
+}
+
+export async function updateArticleReleves(
+  id: string,
+  releves: Record<string, unknown>
+): Promise<void> {
+  const supabase = await createClient()
+  await supabase.from('articles').update({ releves }).eq('id', id)
 }
 
 export async function bulkResetReadings(ids: string[]): Promise<void> {
   if (!ids.length) return
   const supabase = await createClient()
+  const releves = { etat: 'Intact', consommation: 'Nulle', traces: 'Aucune', action: 'RAS' }
   await supabase
-    .from('postes')
-    .update({ etat: 'Intact', consommation: 'Nulle', traces: 'Aucune', action: 'RAS' })
+    .from('articles')
+    .update({ releves })
     .in('id', ids)
 }
 
-export async function createPoste(
+export async function createArticle(
   interventionId: string,
   label: string,
   x: number,
-  y: number
-): Promise<PosteRow | null> {
+  y: number,
+  article_type: string = 'poste_appatage'
+): Promise<ArticleRow | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
   const { count } = await supabase
-    .from('postes')
+    .from('articles')
     .select('*', { count: 'exact', head: true })
     .eq('intervention_id', interventionId)
 
   const ordre = (count ?? 0) + 1
 
   const { data, error } = await supabase
-    .from('postes')
-    .insert({ intervention_id: interventionId, label, x, y, ordre })
-    .select('id, label, x, y, ordre, etat, consommation, traces, action')
+    .from('articles')
+    .insert({ intervention_id: interventionId, label, x, y, ordre, article_type })
+    .select('id, label, x, y, ordre, article_type, releves, etat, consommation, traces, action')
     .single()
 
   if (error || !data) return null
-  return data as PosteRow
+  return data as ArticleRow
 }
 
-export async function updatePostePosition(id: string, x: number, y: number): Promise<void> {
+export async function updateArticlePosition(id: string, x: number, y: number): Promise<void> {
   const supabase = await createClient()
-  await supabase.from('postes').update({ x, y }).eq('id', id)
+  await supabase.from('articles').update({ x, y }).eq('id', id)
 }
 
-export async function updatePosteLabel(id: string, label: string): Promise<void> {
+export async function updateArticleLabel(id: string, label: string): Promise<void> {
   const supabase = await createClient()
-  await supabase.from('postes').update({ label }).eq('id', id)
+  await supabase.from('articles').update({ label }).eq('id', id)
 }
 
-export async function deletePoste(id: string): Promise<void> {
+export async function deleteArticle(id: string): Promise<void> {
   const supabase = await createClient()
-  await supabase.from('postes').delete().eq('id', id)
+  await supabase.from('articles').delete().eq('id', id)
 }

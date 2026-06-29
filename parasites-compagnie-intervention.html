@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parasites Compagnie · Compte rendu d'intervention</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-2: #f5f5f4;
+    --surface-3: #e7e5e4;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --text: #1c1917;
+    --text-muted: #57534e;
+    --text-dim: #a8a29e;
+    --primary: #0d7d6e;
+    --primary-dark: #0a5e53;
+    --primary-light: #d1f5ed;
+    --primary-text: #064e44;
+    --alert: #b91c1c;
+    --alert-light: #fef2f2;
+    --alert-text: #7f1d1d;
+    --warning: #b45309;
+    --warning-light: #fef3c7;
+    --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
+    --shadow: 0 1px 3px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Geist', -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .mono { font-family: 'Geist Mono', monospace; }
+
+  .app {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  .demo-banner {
+    background: linear-gradient(90deg, var(--primary-light) 0%, transparent 100%);
+    border-left: 3px solid var(--primary);
+    padding: 10px 16px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--primary-text);
+  }
+  .demo-banner strong { font-weight: 600; }
+
+  .frame {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .app-header {
+    background: var(--surface);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+  .brand-dot {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .brand-sub { color: var(--text-muted); font-weight: 400; margin-left: 4px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-muted);
+    background: var(--surface-2);
+    padding: 5px 10px;
+    border-radius: 999px;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+  }
+
+  .infobar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .infobar > div {
+    padding: 14px 20px;
+    border-right: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .infobar > div:last-child { border-right: none; }
+  .infobar label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .section {
+    padding: 24px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .section:first-of-type { border-top: none; }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .section-title { font-size: 16px; font-weight: 600; margin: 0; }
+  .section-sub { font-size: 13px; color: var(--text-muted); margin-left: auto; }
+
+  .toolbar {
+    display: flex; gap: 6px; margin-bottom: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .tool-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .tool-btn:hover { background: var(--surface-2); border-color: var(--text-dim); }
+  .tool-btn.active {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary-text);
+    font-weight: 500;
+  }
+  .tool-btn svg { width: 14px; height: 14px; }
+  .count-badge {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    padding: 5px 10px;
+    border-radius: 6px;
+  }
+  .toolbar-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  .plan-svg {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    display: block;
+    user-select: none;
+  }
+  .plan-svg.add-mode { cursor: crosshair; }
+  .plan-svg.move-mode { cursor: move; }
+  .plan-svg.delete-mode { cursor: not-allowed; }
+
+  .selected-info {
+    background: var(--primary-light);
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--primary-text);
+    display: none;
+  }
+  .selected-info.show { display: flex; align-items: center; gap: 8px; }
+  .selected-info code {
+    font-family: 'Geist Mono', monospace;
+    background: rgba(13, 125, 110, 0.15);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 10px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hint svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .poste-row {
+    display: grid;
+    grid-template-columns: 56px 1fr 1fr 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--surface);
+  }
+  .poste-tag {
+    font-weight: 600;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'Geist Mono', monospace;
+  }
+  .tag-ok { background: var(--primary-light); color: var(--primary-text); }
+  .tag-alert { background: var(--alert-light); color: var(--alert-text); }
+  .field-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .field-select {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .field-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 125, 110, 0.15);
+  }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 700px) {
+    .photo-grid { grid-template-columns: repeat(2, 1fr); }
+    .infobar { grid-template-columns: repeat(2, 1fr); }
+    .infobar > div:nth-child(2) { border-right: none; }
+    .infobar > div:nth-child(1), .infobar > div:nth-child(2) { border-bottom: 1px solid var(--border); }
+    .poste-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  }
+  .photo {
+    aspect-ratio: 4/3;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border);
+  }
+  .photo svg { width: 100%; height: 100%; display: block; }
+  .photo-label {
+    position: absolute;
+    bottom: 6px; left: 6px; right: 6px;
+    background: rgba(28, 25, 23, 0.78);
+    color: white;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .photo-add {
+    aspect-ratio: 4/3;
+    background: var(--surface-2);
+    border: 2px dashed var(--border-strong);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .photo-add:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary-text);
+  }
+  .photo-add svg { width: 24px; height: 24px; }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--text);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .chip:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary-text);
+  }
+  .chip:active { transform: scale(0.96); }
+
+  .textarea {
+    width: 100%;
+    min-height: 110px;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    font-family: inherit;
+    resize: vertical;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  .textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 125, 110, 0.15);
+  }
+
+  .sig-wrap {
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .sig-canvas {
+    width: 100%;
+    height: 160px;
+    background: var(--surface);
+    border: 1px dashed var(--border-strong);
+    border-radius: 8px;
+    cursor: crosshair;
+    touch-action: none;
+    display: block;
+  }
+  .sig-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding: 0 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .sig-clear {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 4px;
+  }
+  .sig-clear:hover { background: rgba(13, 125, 110, 0.08); }
+
+  .footer {
+    padding: 16px 20px;
+    background: var(--surface-2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .footer-info {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cta {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 11px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .cta:hover { background: var(--primary-dark); }
+  .cta svg { width: 16px; height: 16px; }
+
+  .poste-circle {
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .poste-circle:hover { transform-origin: center; }
+
+  @keyframes ping {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+  .ping {
+    transform-origin: center;
+    animation: ping 0.6s ease-out;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* Navigation tabs */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .nav-tab {
+    flex: 1;
+    padding: 10px 14px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    border-radius: 7px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s;
+  }
+  .nav-tab svg { width: 16px; height: 16px; }
+  .nav-tab:hover { background: var(--surface-2); color: var(--text); }
+  .nav-tab.active { background: var(--primary); color: white; }
+  .nav-tab .count {
+    background: rgba(255, 255, 255, 0.25);
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .nav-tab:not(.active) .count {
+    background: var(--surface-3);
+    color: var(--text-muted);
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* History view */
+  .history-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 9px 12px 9px 36px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13.5px;
+    background: var(--surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a8a29e' stroke-width='2'><circle cx='11' cy='11' r='8'/><path d='M21 21l-4.35-4.35'/></svg>") no-repeat 12px center;
+    color: var(--text);
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 125, 110, 0.15);
+  }
+  .filter-select {
+    padding: 9px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13.5px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .report-list { display: flex; flex-direction: column; gap: 8px; }
+  .report-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 16px;
+    align-items: center;
+    transition: all 0.15s;
+  }
+  .report-card:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+  .report-info { min-width: 0; }
+  .report-client { font-weight: 600; font-size: 14.5px; margin-bottom: 3px; }
+  .report-meta { font-size: 12.5px; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; }
+  .report-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .report-meta svg { width: 12px; height: 12px; }
+  .report-status {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .status-signed { background: var(--primary-light); color: var(--primary-text); }
+  .status-pending { background: var(--warning-light); color: var(--warning); }
+  .status-draft { background: var(--surface-2); color: var(--text-muted); }
+  .report-action {
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .report-action svg { width: 13px; height: 13px; }
+  .report-action:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary-text); }
+
+  @media (max-width: 700px) {
+    .nav-tab { padding: 9px 10px; font-size: 12.5px; }
+    .nav-tab span.label-full { display: none; }
+    .report-card { grid-template-columns: 1fr auto; gap: 8px; }
+    .report-card .report-status { grid-column: 2; }
+    .report-card .report-action { grid-column: 1 / -1; justify-content: center; }
+  }
+
+  /* Accounts view */
+  .accounts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 800px) { .accounts-grid { grid-template-columns: 1fr; } }
+  .accounts-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    gap: 10px;
+  }
+  .panel-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .panel-title svg { width: 16px; height: 16px; }
+  .btn-add {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-add:hover { background: var(--primary-dark); }
+  .btn-add svg { width: 13px; height: 13px; }
+
+  .user-list { display: flex; flex-direction: column; gap: 6px; }
+  .user-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    transition: background 0.12s;
+  }
+  .user-row:hover { background: var(--surface-2); }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .avatar.client { background: #475569; }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-weight: 500; font-size: 13.5px; }
+  .user-meta { font-size: 12px; color: var(--text-muted); }
+  .role-badge {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+  }
+  .role-admin { background: #fef3c7; color: #92400e; }
+  .role-tech { background: var(--primary-light); color: var(--primary-text); }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 25, 23, 0.5);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 14px;
+    max-width: 560px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-head {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title { font-size: 16px; font-weight: 600; margin: 0; }
+  .modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 4px;
+    display: flex;
+  }
+  .modal-close svg { width: 20px; height: 20px; }
+  .modal-body { padding: 20px; }
+  .modal-foot {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+  .form-input, .form-select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 13.5px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  .form-input:focus, .form-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 125, 110, 0.15);
+  }
+  .btn-secondary {
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--primary);
+    border: none;
+    color: white;
+    padding: 9px 16px;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-primary:hover { background: var(--primary-dark); }
+
+  /* Report detail modal */
+  .report-detail-section {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .report-detail-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .report-detail-section h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    margin: 0 0 8px;
+    font-weight: 500;
+  }
+  .report-detail-section p { margin: 0; font-size: 13.5px; line-height: 1.55; }
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .info-grid > div { font-size: 13px; }
+  .info-grid label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); margin-bottom: 2px; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="demo-banner">
+    <strong>Maquette interactive</strong> · importez votre plan, placez vos postes, signez et générez le rapport. Consultez l'historique et les comptes utilisateurs/clients via le menu en haut à droite.
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-view="intervention">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <span class="label-full">Intervention</span>
+    </button>
+    <button class="nav-tab" data-view="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+      <span class="label-full">Historique</span>
+      <span class="count" id="historyCount">24</span>
+    </button>
+    <button class="nav-tab" data-view="accounts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      <span class="label-full">Comptes</span>
+    </button>
+  </div>
+
+  <!-- VIEW : INTERVENTION (existing form) -->
+  <div class="view active" id="view-intervention">
+  <div class="frame">
+
+    <div class="app-header">
+      <div class="brand">
+        <span class="brand-dot">P</span>
+        <span>Parasites Compagnie<span class="brand-sub"> · Compte rendu d'intervention</span></span>
+      </div>
+      <span class="status-pill"><span class="status-dot"></span>Sauvegarde auto · hors-ligne OK</span>
+    </div>
+
+    <div class="infobar">
+      <div><label>Client</label>Restaurant Le Tilleul</div>
+      <div><label>Adresse</label>14 rue de la Paix, Lyon 2e</div>
+      <div><label>Date</label>14/05/2026 · 09:30</div>
+      <div><label>Technicien</label>Alex M.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="step-num">1</span>
+        <h3 class="section-title">Plan interactif</h3>
+        <span class="section-sub">Positionnement des postes d'appâtage</span>
+      </div>
+
+      <div class="toolbar">
+        <button class="tool-btn active" id="toolAdd">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.5-7-12a7 7 0 0114 0c0 5.5-7 12-7 12z"/><path d="M9 10h6M12 7v6"/></svg>
+          Ajouter
+        </button>
+        <button class="tool-btn" id="toolMove">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+          Déplacer
+        </button>
+        <button class="tool-btn" id="toolDelete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          Supprimer
+        </button>
+        <span class="toolbar-sep"></span>
+        <button class="tool-btn" id="planUploadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Importer un plan
+        </button>
+        <button class="tool-btn" id="planRemoveBtn" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          Retirer
+        </button>
+        <input type="file" id="planFileInput" accept="image/*" style="display:none;">
+        <span class="count-badge"><span id="posteCount">5</span> postes</span>
+      </div>
+
+      <svg viewBox="0 0 600 320" class="plan-svg add-mode" id="planSvg" aria-label="Plan de l'établissement" preserveAspectRatio="xMidYMid meet">
+        <image id="uploadedPlanImg" x="0" y="0" width="0" height="0" style="display:none;" preserveAspectRatio="xMidYMid meet"></image>
+        <g id="demoRooms">
+          <rect x="20" y="20" width="560" height="280" fill="#ffffff" stroke="#a8a29e" stroke-width="1.5"/>
+          <line x1="280" y1="20" x2="280" y2="190" stroke="#d6d3d1" stroke-width="1"/>
+          <line x1="20" y1="190" x2="580" y2="190" stroke="#d6d3d1" stroke-width="1"/>
+          <line x1="280" y1="140" x2="580" y2="140" stroke="#d6d3d1" stroke-width="1"/>
+          <line x1="430" y1="140" x2="430" y2="190" stroke="#d6d3d1" stroke-width="1"/>
+          <line x1="195" y1="190" x2="225" y2="190" stroke="#ffffff" stroke-width="3"/>
+          <line x1="395" y1="190" x2="425" y2="190" stroke="#ffffff" stroke-width="3"/>
+          <text x="150" y="38" text-anchor="middle" style="font-size:11px;fill:#78716c;font-family:Geist;letter-spacing:0.04em;text-transform:uppercase;">Cuisine</text>
+          <text x="430" y="38" text-anchor="middle" style="font-size:11px;fill:#78716c;font-family:Geist;letter-spacing:0.04em;text-transform:uppercase;">Réserve sèche</text>
+          <text x="355" y="170" text-anchor="middle" style="font-size:10px;fill:#78716c;font-family:Geist;letter-spacing:0.04em;text-transform:uppercase;">Plonge</text>
+          <text x="505" y="170" text-anchor="middle" style="font-size:9px;fill:#78716c;font-family:Geist;letter-spacing:0.04em;text-transform:uppercase;">Chambre froide</text>
+          <text x="300" y="210" text-anchor="middle" style="font-size:11px;fill:#78716c;font-family:Geist;letter-spacing:0.04em;text-transform:uppercase;">Salle / Service</text>
+        </g>
+        <g id="postesGroup"></g>
+      </svg>
+
+      <div class="selected-info" id="selectedInfo"></div>
+
+      <p class="hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        Chaque poste est associé à un QR code physique scannable pour relever rapidement.
+      </p>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="step-num">2</span>
+        <h3 class="section-title">Relevés par poste</h3>
+        <span class="section-sub">Champs entièrement paramétrables</span>
+      </div>
+
+      <div class="poste-row">
+        <span class="poste-tag tag-ok">P1</span>
+        <div><span class="field-label">État</span><select class="field-select"><option>Intact</option><option>Dégradé</option><option>Manquant</option></select></div>
+        <div><span class="field-label">Consommation</span><select class="field-select"><option>Nulle</option><option>Partielle</option><option>Totale</option></select></div>
+        <div><span class="field-label">Traces</span><select class="field-select"><option>Aucune</option><option>Déjections</option><option>Rongeurs</option></select></div>
+        <div><span class="field-label">Action</span><select class="field-select"><option>RAS</option><option>Renouvellement</option></select></div>
+      </div>
+
+      <div class="poste-row">
+        <span class="poste-tag tag-ok">P2</span>
+        <div><span class="field-label">État</span><select class="field-select"><option>Intact</option><option>Dégradé</option></select></div>
+        <div><span class="field-label">Consommation</span><select class="field-select"><option>Partielle</option><option>Nulle</option><option>Totale</option></select></div>
+        <div><span class="field-label">Traces</span><select class="field-select"><option>Aucune</option><option>Déjections</option></select></div>
+        <div><span class="field-label">Action</span><select class="field-select"><option>Renouvellement</option><option>RAS</option></select></div>
+      </div>
+
+      <div class="poste-row">
+        <span class="poste-tag tag-alert">P4</span>
+        <div><span class="field-label">État</span><select class="field-select"><option>Dégradé</option><option>Intact</option></select></div>
+        <div><span class="field-label">Consommation</span><select class="field-select"><option>Totale</option><option>Partielle</option></select></div>
+        <div><span class="field-label">Traces</span><select class="field-select"><option>Déjections</option><option>Rongeurs</option><option>Aucune</option></select></div>
+        <div><span class="field-label">Action</span><select class="field-select"><option>Renouvellement</option><option>Repositionnement</option></select></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="step-num">3</span>
+        <h3 class="section-title">Photos</h3>
+        <span class="section-sub">Rattachées aux postes pour traçabilité</span>
+      </div>
+      <div class="photo-grid">
+        <div class="photo">
+          <svg viewBox="0 0 120 90" preserveAspectRatio="xMidYMid slice">
+            <rect width="120" height="90" fill="#525252"/>
+            <rect x="20" y="25" width="80" height="50" fill="#737373" stroke="#404040"/>
+            <rect x="30" y="20" width="60" height="10" fill="#262626"/>
+            <circle cx="60" cy="50" r="8" fill="#171717"/>
+            <path d="M60 42 L62 50 L60 58 L58 50 Z" fill="#404040"/>
+          </svg>
+          <span class="photo-label">P4 · poste dégradé</span>
+        </div>
+        <div class="photo">
+          <svg viewBox="0 0 120 90" preserveAspectRatio="xMidYMid slice">
+            <rect width="120" height="90" fill="#a8a29e"/>
+            <rect x="0" y="55" width="120" height="35" fill="#78716c"/>
+            <ellipse cx="30" cy="48" rx="2.5" ry="1" fill="#1c1917"/>
+            <ellipse cx="48" cy="52" rx="2" ry="0.8" fill="#1c1917"/>
+            <ellipse cx="72" cy="46" rx="3" ry="1.2" fill="#1c1917"/>
+            <ellipse cx="92" cy="50" rx="2" ry="0.8" fill="#1c1917"/>
+          </svg>
+          <span class="photo-label">Traces · réserve</span>
+        </div>
+        <div class="photo">
+          <svg viewBox="0 0 120 90" preserveAspectRatio="xMidYMid slice">
+            <rect width="120" height="90" fill="#d6d3d1"/>
+            <rect x="15" y="15" width="90" height="60" fill="#78716c" stroke="#44403c"/>
+            <line x1="15" y1="45" x2="105" y2="45" stroke="#44403c"/>
+            <line x1="60" y1="15" x2="60" y2="75" stroke="#44403c"/>
+            <circle cx="35" cy="30" r="3" fill="#0d7d6e"/>
+            <circle cx="85" cy="60" r="3" fill="#0d7d6e"/>
+          </svg>
+          <span class="photo-label">Vue d'ensemble</span>
+        </div>
+        <div class="photo-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>Ajouter une photo</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="step-num">4</span>
+        <h3 class="section-title">Synthèse de l'intervention</h3>
+        <span class="section-sub">Bibliothèque de phrases personnalisables</span>
+      </div>
+      <div class="chips" id="chips">
+        <button class="chip" data-phrase="Aucune trace de nuisible observée lors de cette visite. ">Aucune trace</button>
+        <button class="chip" data-phrase="Présence de déjections constatée au niveau de la réserve sèche. ">Déjections réserve</button>
+        <button class="chip" data-phrase="Consommation totale d'appât observée au poste P4. ">Conso. totale P4</button>
+        <button class="chip" data-phrase="Renouvellement de l'appât effectué sur l'ensemble des postes. ">Renouvellement appâts</button>
+        <button class="chip" data-phrase="Recommandation : nettoyage approfondi et obturation des points d'entrée. ">Recommandation hygiène</button>
+        <button class="chip" data-phrase="Prochaine visite préconisée sous 4 semaines. ">Prochaine visite</button>
+        <button class="chip" data-phrase="Aucun produit biocide appliqué lors de cette visite de contrôle. ">Pas de biocide</button>
+      </div>
+      <textarea class="textarea" id="synthese" placeholder="Tapez votre synthèse ou cliquez sur une phrase ci-dessus pour l'insérer...">Intervention de contrôle mensuel réalisée selon protocole CEPA. </textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="step-num">5</span>
+        <h3 class="section-title">Signature du client</h3>
+        <span class="section-sub">Validation sur place</span>
+      </div>
+      <div class="sig-wrap">
+        <canvas class="sig-canvas" id="sigCanvas"></canvas>
+        <div class="sig-toolbar">
+          <span>Signature de M. Dubois, gérant</span>
+          <button class="sig-clear" id="sigClear">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16M3 21v-5h5"/></svg>
+            Effacer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span class="footer-info">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Sauvegarde automatique · il y a 12 sec
+      </span>
+      <button class="cta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Générer le rapport PDF
+      </button>
+    </div>
+
+  </div>
+  </div>
+
+  <!-- VIEW : HISTORIQUE -->
+  <div class="view" id="view-history">
+    <div class="frame">
+      <div class="section" style="border-top: none;">
+        <div class="section-head">
+          <span class="step-num"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></span>
+          <h3 class="section-title">Historique des rapports</h3>
+          <span class="section-sub" id="historySubcount">24 rapports archivés</span>
+        </div>
+
+        <div class="history-controls">
+          <input type="text" class="search-input" id="historySearch" placeholder="Rechercher par client, adresse, technicien...">
+          <select class="filter-select" id="historyFilter">
+            <option value="all">Tous les statuts</option>
+            <option value="signed">Signés</option>
+            <option value="pending">En attente</option>
+            <option value="draft">Brouillons</option>
+          </select>
+          <select class="filter-select" id="historyPeriod">
+            <option value="all">Toutes périodes</option>
+            <option value="month">Ce mois</option>
+            <option value="quarter">Ce trimestre</option>
+            <option value="year">Cette année</option>
+          </select>
+        </div>
+
+        <div class="report-list" id="reportList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW : COMPTES -->
+  <div class="view" id="view-accounts">
+    <div class="accounts-grid">
+
+      <div class="accounts-panel">
+        <div class="panel-head">
+          <h3 class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            Utilisateurs internes
+          </h3>
+          <button class="btn-add" id="addUserBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Ajouter
+          </button>
+        </div>
+        <div class="user-list" id="userList"></div>
+      </div>
+
+      <div class="accounts-panel">
+        <div class="panel-head">
+          <h3 class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Comptes clients
+          </h3>
+          <button class="btn-add" id="addClientBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Ajouter
+          </button>
+        </div>
+        <div class="user-list" id="clientList"></div>
+        <p class="hint" style="margin-top: 14px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          Les clients accèdent à un portail dédié pour consulter et télécharger leurs rapports d'intervention.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL : Détail rapport -->
+  <div class="modal-backdrop" id="reportModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title">Rapport d'intervention</h3>
+        <button class="modal-close" id="reportModalClose">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="reportModalBody"></div>
+      <div class="modal-foot">
+        <button class="btn-secondary" id="reportModalCloseBtn">Fermer</button>
+        <button class="btn-primary">
+          Télécharger PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL : Nouvel utilisateur / client -->
+  <div class="modal-backdrop" id="accountModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title" id="accountModalTitle">Nouvel utilisateur</h3>
+        <button class="modal-close" id="accountModalClose">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nom complet</label>
+          <input type="text" class="form-input" id="accountName" placeholder="Ex : Jean Dupont">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" class="form-input" id="accountEmail" placeholder="jean.dupont@example.com">
+        </div>
+        <div class="form-group" id="roleGroup">
+          <label>Rôle</label>
+          <select class="form-select" id="accountRole">
+            <option value="tech">Technicien</option>
+            <option value="admin">Administrateur</option>
+          </select>
+        </div>
+        <div class="form-group" id="companyGroup" style="display:none;">
+          <label>Société / Établissement</label>
+          <input type="text" class="form-input" id="accountCompany" placeholder="Ex : Restaurant Le Tilleul">
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-secondary" id="accountModalCancel">Annuler</button>
+        <button class="btn-primary" id="accountModalSave">Créer le compte</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const svg = document.getElementById('planSvg');
+  const group = document.getElementById('postesGroup');
+  const countEl = document.getElementById('posteCount');
+  const infoEl = document.getElementById('selectedInfo');
+  const toolAdd = document.getElementById('toolAdd');
+  const toolMove = document.getElementById('toolMove');
+  const toolDelete = document.getElementById('toolDelete');
+  const tools = [toolAdd, toolMove, toolDelete];
+  let mode = 'add';
+  let selectedId = null;
+  let dragging = null;
+
+  const postes = [
+    {id:1, x:80, y:120, status:'ok'},
+    {id:2, x:220, y:160, status:'ok'},
+    {id:3, x:380, y:80, status:'ok'},
+    {id:4, x:500, y:165, status:'alert'},
+    {id:5, x:150, y:250, status:'ok'}
+  ];
+  let nextId = 6;
+
+  function render(){
+    group.innerHTML = '';
+    const vbWidth = svg.viewBox.baseVal.width || 600;
+    const r = Math.max(10, Math.min(22, vbWidth / 40));
+    const fs = Math.max(9, Math.min(14, vbWidth / 55));
+    postes.forEach(p => {
+      const fill = p.status === 'alert' ? '#b91c1c' : '#0d7d6e';
+      const stroke = selectedId === p.id ? '#1c1917' : 'rgba(255,255,255,0.9)';
+      const sw = selectedId === p.id ? '2.5' : '2';
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('data-id', p.id);
+      g.style.cursor = mode === 'delete' ? 'not-allowed' : (mode === 'move' ? 'move' : 'pointer');
+      g.innerHTML = `
+        <circle class="poste-circle" cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>
+        <text x="${p.x}" y="${p.y + fs/3}" text-anchor="middle" fill="white" style="font-size:${fs}px;font-weight:600;font-family:Geist Mono;pointer-events:none;">P${p.id}</text>
+      `;
+      g.addEventListener('mousedown', e => handleDown(e, p));
+      g.addEventListener('touchstart', e => handleDown(e, p));
+      group.appendChild(g);
+    });
+    countEl.textContent = postes.length;
+  }
+
+  function viewBoxBounds() {
+    const vb = svg.viewBox.baseVal;
+    return {minX: vb.x, minY: vb.y, maxX: vb.x + vb.width, maxY: vb.y + vb.height, w: vb.width, h: vb.height};
+  }
+
+  function svgCoords(e){
+    const pt = svg.createSVGPoint();
+    const t = e.touches ? e.touches[0] : e;
+    pt.x = t.clientX; pt.y = t.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function handleDown(e, p){
+    e.stopPropagation();
+    if (mode === 'delete') {
+      const i = postes.findIndex(x => x.id === p.id);
+      if (i >= 0) postes.splice(i, 1);
+      if (selectedId === p.id) { selectedId = null; infoEl.classList.remove('show'); }
+      render();
+      return;
+    }
+    selectedId = p.id;
+    showSelected(p);
+    render();
+    if (mode === 'move') {
+      dragging = p;
+      e.preventDefault();
+    }
+  }
+
+  function showSelected(p){
+    infoEl.classList.add('show');
+    infoEl.innerHTML = `
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.5-7-12a7 7 0 0114 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      <span><strong style="font-weight:600;">Poste P${p.id}</strong> sélectionné · position (${Math.round(p.x)}, ${Math.round(p.y)}) · QR code <code>PC-${String(p.id).padStart(4,'0')}</code></span>
+    `;
+  }
+
+  function setMode(m){
+    mode = m;
+    tools.forEach(t => t.classList.remove('active'));
+    svg.classList.remove('add-mode', 'move-mode', 'delete-mode');
+    if (m === 'add') { toolAdd.classList.add('active'); svg.classList.add('add-mode'); }
+    if (m === 'move') { toolMove.classList.add('active'); svg.classList.add('move-mode'); }
+    if (m === 'delete') { toolDelete.classList.add('active'); svg.classList.add('delete-mode'); }
+    render();
+  }
+
+  toolAdd.addEventListener('click', () => setMode('add'));
+  toolMove.addEventListener('click', () => setMode('move'));
+  toolDelete.addEventListener('click', () => setMode('delete'));
+
+  const planFileInput = document.getElementById('planFileInput');
+  const planUploadBtn = document.getElementById('planUploadBtn');
+  const planRemoveBtn = document.getElementById('planRemoveBtn');
+  const planImg = document.getElementById('uploadedPlanImg');
+  const demoRooms = document.getElementById('demoRooms');
+  let currentObjectUrl = null;
+
+  planUploadBtn.addEventListener('click', () => planFileInput.click());
+
+  planFileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = URL.createObjectURL(file);
+    const tmp = new Image();
+    tmp.onload = () => {
+      const maxDim = 800;
+      let w = tmp.naturalWidth, h = tmp.naturalHeight;
+      if (w >= h && w > maxDim) { h = h * (maxDim / w); w = maxDim; }
+      else if (h > w && h > maxDim) { w = w * (maxDim / h); h = maxDim; }
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      planImg.setAttribute('x', '0');
+      planImg.setAttribute('y', '0');
+      planImg.setAttribute('width', w);
+      planImg.setAttribute('height', h);
+      planImg.setAttributeNS('http://www.w3.org/1999/xlink', 'href', currentObjectUrl);
+      planImg.setAttribute('href', currentObjectUrl);
+      planImg.style.display = 'block';
+      demoRooms.style.display = 'none';
+      postes.length = 0;
+      selectedId = null;
+      nextId = 1;
+      infoEl.classList.remove('show');
+      planRemoveBtn.style.display = 'inline-flex';
+      planUploadBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        Changer le plan`;
+      render();
+    };
+    tmp.src = currentObjectUrl;
+    e.target.value = '';
+  });
+
+  planRemoveBtn.addEventListener('click', () => {
+    if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+    planImg.style.display = 'none';
+    planImg.setAttribute('href', '');
+    planImg.removeAttributeNS('http://www.w3.org/1999/xlink', 'href');
+    demoRooms.style.display = '';
+    svg.setAttribute('viewBox', '0 0 600 320');
+    postes.length = 0;
+    [
+      {id:1, x:80, y:120, status:'ok'},
+      {id:2, x:220, y:160, status:'ok'},
+      {id:3, x:380, y:80, status:'ok'},
+      {id:4, x:500, y:165, status:'alert'},
+      {id:5, x:150, y:250, status:'ok'}
+    ].forEach(p => postes.push(p));
+    nextId = 6;
+    selectedId = null;
+    infoEl.classList.remove('show');
+    planRemoveBtn.style.display = 'none';
+    planUploadBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      Importer un plan`;
+    render();
+  });
+
+  svg.addEventListener('click', e => {
+    if (mode !== 'add' || dragging) return;
+    if (e.target.tagName === 'circle' || e.target.tagName === 'text') return;
+    const c = svgCoords(e);
+    const b = viewBoxBounds();
+    const pad = b.w * 0.02;
+    if (c.x < b.minX + pad || c.x > b.maxX - pad || c.y < b.minY + pad || c.y > b.maxY - pad) return;
+    const p = {id: nextId++, x: c.x, y: c.y, status: 'ok'};
+    postes.push(p);
+    selectedId = p.id;
+    showSelected(p);
+    render();
+  });
+
+  svg.addEventListener('mousemove', e => {
+    if (!dragging || mode !== 'move') return;
+    const c = svgCoords(e);
+    const b = viewBoxBounds();
+    const pad = b.w * 0.02;
+    dragging.x = Math.max(b.minX + pad, Math.min(b.maxX - pad, c.x));
+    dragging.y = Math.max(b.minY + pad, Math.min(b.maxY - pad, c.y));
+    render();
+    showSelected(dragging);
+  });
+  svg.addEventListener('touchmove', e => {
+    if (!dragging || mode !== 'move') return;
+    const c = svgCoords(e);
+    const b = viewBoxBounds();
+    const pad = b.w * 0.02;
+    dragging.x = Math.max(b.minX + pad, Math.min(b.maxX - pad, c.x));
+    dragging.y = Math.max(b.minY + pad, Math.min(b.maxY - pad, c.y));
+    render();
+    showSelected(dragging);
+    e.preventDefault();
+  }, {passive: false});
+  document.addEventListener('mouseup', () => { dragging = null; });
+  document.addEventListener('touchend', () => { dragging = null; });
+
+  render();
+
+  const chips = document.querySelectorAll('#chips .chip');
+  const ta = document.getElementById('synthese');
+  chips.forEach(c => c.addEventListener('click', () => {
+    const phrase = c.getAttribute('data-phrase');
+    if (ta.value && !ta.value.endsWith(' ') && !ta.value.endsWith('\n')) ta.value += ' ';
+    ta.value += phrase;
+    ta.focus();
+    ta.scrollTop = ta.scrollHeight;
+  }));
+
+  const canvas = document.getElementById('sigCanvas');
+  const ctx = canvas.getContext('2d');
+  function fitCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(dpr, dpr);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#0d7d6e';
+  }
+  fitCanvas();
+  window.addEventListener('resize', fitCanvas);
+
+  let drawing = false;
+  function pos(e){
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return {x: t.clientX - rect.left, y: t.clientY - rect.top};
+  }
+  function start(e){ drawing = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+  function move(e){ if(!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }
+  function end(){ drawing = false; }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', start, {passive: false});
+  canvas.addEventListener('touchmove', move, {passive: false});
+  canvas.addEventListener('touchend', end);
+
+  document.getElementById('sigClear').addEventListener('click', () => {
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, rect.width * (window.devicePixelRatio || 1), rect.height * (window.devicePixelRatio || 1));
+  });
+
+  /* ===== NAVIGATION TABS ===== */
+  const tabs = document.querySelectorAll('.nav-tab');
+  const views = document.querySelectorAll('.view');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    const target = t.getAttribute('data-view');
+    tabs.forEach(x => x.classList.toggle('active', x === t));
+    views.forEach(v => v.classList.toggle('active', v.id === 'view-' + target));
+  }));
+
+  /* ===== HISTORIQUE DES RAPPORTS ===== */
+  const reports = [
+    { id: 'INT-2026-0142', client: 'Restaurant Le Tilleul', address: '14 rue de la Paix, Lyon 2e', date: '14/05/2026', tech: 'Alex M.', status: 'pending', type: 'Contrôle mensuel', summary: 'Intervention de contrôle mensuel réalisée selon protocole CEPA. Consommation totale d\'appât observée au poste P4. Renouvellement effectué.', postes: 5 },
+    { id: 'INT-2026-0141', client: 'Boulangerie Martin', address: '8 cours Lafayette, Lyon 3e', date: '13/05/2026', tech: 'Alex M.', status: 'signed', type: 'Dératisation', summary: 'Aucune trace de nuisible observée lors de cette visite. Renouvellement préventif des appâts.', postes: 8 },
+    { id: 'INT-2026-0140', client: 'Hôtel Belvédère', address: '22 quai Saint-Antoine, Lyon 2e', date: '12/05/2026', tech: 'Sophie L.', status: 'signed', type: 'Désinsectisation', summary: 'Traitement préventif anti-cafards en cuisine et locaux poubelles. Aucune trace constatée.', postes: 12 },
+    { id: 'INT-2026-0139', client: 'EHPAD Les Lilas', address: '45 av. Berthelot, Lyon 7e', date: '11/05/2026', tech: 'Alex M.', status: 'signed', type: 'Contrôle mensuel', summary: 'Contrôle conforme. Aucune anomalie sur l\'ensemble des postes.', postes: 18 },
+    { id: 'INT-2026-0138', client: 'Restaurant Le Tilleul', address: '14 rue de la Paix, Lyon 2e', date: '14/04/2026', tech: 'Alex M.', status: 'signed', type: 'Contrôle mensuel', summary: 'Présence de déjections constatée au niveau de la réserve sèche. Recommandation : nettoyage approfondi.', postes: 5 },
+    { id: 'INT-2026-0137', client: 'Syndic Foncia - Rés. Bellevue', address: '3 rue des Lauriers, Caluire', date: '10/04/2026', tech: 'Sophie L.', status: 'draft', type: 'Diagnostic', summary: 'Diagnostic initial parties communes. Devis en préparation pour traitement complet.', postes: 0 }
+  ];
+
+  const reportList = document.getElementById('reportList');
+  const historySearch = document.getElementById('historySearch');
+  const historyFilter = document.getElementById('historyFilter');
+  const historyCount = document.getElementById('historyCount');
+  const historySubcount = document.getElementById('historySubcount');
+
+  function statusLabel(s) {
+    return s === 'signed' ? 'Signé' : s === 'pending' ? 'En attente' : 'Brouillon';
+  }
+
+  function renderReports() {
+    const q = historySearch.value.toLowerCase().trim();
+    const f = historyFilter.value;
+    const filtered = reports.filter(r => {
+      if (f !== 'all' && r.status !== f) return false;
+      if (q && !(r.client.toLowerCase().includes(q) || r.address.toLowerCase().includes(q) || r.tech.toLowerCase().includes(q) || r.id.toLowerCase().includes(q))) return false;
+      return true;
+    });
+    historyCount.textContent = reports.length;
+    historySubcount.textContent = `${filtered.length} sur ${reports.length} rapports`;
+    reportList.innerHTML = filtered.length ? filtered.map(r => `
+      <div class="report-card" data-id="${r.id}">
+        <div class="report-info">
+          <div class="report-client">${r.client} <span style="color:var(--text-dim);font-weight:400;font-size:12.5px;">· ${r.type}</span></div>
+          <div class="report-meta">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${r.date}</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${r.tech}</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.5-7-12a7 7 0 0114 0c0 5.5-7 12-7 12z"/></svg>${r.postes} postes</span>
+            <span class="mono" style="color:var(--text-dim);">${r.id}</span>
+          </div>
+        </div>
+        <span class="report-status status-${r.status}">${statusLabel(r.status)}</span>
+        <button class="report-action view-report" data-id="${r.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Voir
+        </button>
+      </div>
+    `).join('') : `<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13.5px;">Aucun rapport ne correspond aux critères de recherche.</div>`;
+
+    document.querySelectorAll('.view-report').forEach(b => b.addEventListener('click', e => {
+      const id = e.currentTarget.getAttribute('data-id');
+      openReportModal(reports.find(r => r.id === id));
+    }));
+  }
+
+  historySearch.addEventListener('input', renderReports);
+  historyFilter.addEventListener('change', renderReports);
+  renderReports();
+
+  /* ===== MODAL RAPPORT ===== */
+  const reportModal = document.getElementById('reportModal');
+  const reportModalBody = document.getElementById('reportModalBody');
+  function openReportModal(r) {
+    reportModalBody.innerHTML = `
+      <div class="report-detail-section">
+        <div class="info-grid">
+          <div><label>Référence</label><span class="mono">${r.id}</span></div>
+          <div><label>Date</label>${r.date}</div>
+          <div><label>Client</label>${r.client}</div>
+          <div><label>Adresse</label>${r.address}</div>
+          <div><label>Technicien</label>${r.tech}</div>
+          <div><label>Type</label>${r.type}</div>
+        </div>
+      </div>
+      <div class="report-detail-section">
+        <h4>Postes contrôlés</h4>
+        <p>${r.postes} poste${r.postes > 1 ? 's' : ''} d'appâtage ${r.postes ? 'positionné' + (r.postes > 1 ? 's' : '') + ' sur le plan.' : 'sur cette intervention.'}</p>
+      </div>
+      <div class="report-detail-section">
+        <h4>Synthèse</h4>
+        <p>${r.summary}</p>
+      </div>
+      <div class="report-detail-section">
+        <h4>Statut</h4>
+        <p><span class="report-status status-${r.status}">${statusLabel(r.status)}</span></p>
+      </div>
+    `;
+    reportModal.classList.add('show');
+  }
+  document.getElementById('reportModalClose').addEventListener('click', () => reportModal.classList.remove('show'));
+  document.getElementById('reportModalCloseBtn').addEventListener('click', () => reportModal.classList.remove('show'));
+  reportModal.addEventListener('click', e => { if (e.target === reportModal) reportModal.classList.remove('show'); });
+
+  /* ===== COMPTES UTILISATEURS / CLIENTS ===== */
+  const users = [
+    { name: 'Alex M.', email: 'alex@parasites-compagnie.fr', role: 'admin' },
+    { name: 'Sophie L.', email: 'sophie.l@parasites-compagnie.fr', role: 'tech' },
+    { name: 'Karim B.', email: 'karim.b@parasites-compagnie.fr', role: 'tech' }
+  ];
+  const clients = [
+    { name: 'M. Dubois', company: 'Restaurant Le Tilleul', email: 'gerance@letilleul.fr', reports: 12 },
+    { name: 'Mme Martin', company: 'Boulangerie Martin', email: 'contact@boul-martin.fr', reports: 8 },
+    { name: 'Direction', company: 'Hôtel Belvédère', email: 'direction@hotel-belvedere.fr', reports: 24 },
+    { name: 'Mme Léger', company: 'EHPAD Les Lilas', email: 'direction@ehpad-lilas.fr', reports: 36 },
+    { name: 'Foncia', company: 'Syndic Foncia Lyon', email: 'lyon@foncia.fr', reports: 5 }
+  ];
+
+  function initials(name) {
+    return name.split(' ').filter(Boolean).slice(0, 2).map(s => s[0]).join('').toUpperCase();
+  }
+  function roleLabel(r) { return r === 'admin' ? 'Admin' : 'Technicien'; }
+
+  function renderUsers() {
+    document.getElementById('userList').innerHTML = users.map(u => `
+      <div class="user-row">
+        <div class="avatar">${initials(u.name)}</div>
+        <div class="user-info">
+          <div class="user-name">${u.name}</div>
+          <div class="user-meta">${u.email}</div>
+        </div>
+        <span class="role-badge role-${u.role}">${roleLabel(u.role)}</span>
+      </div>
+    `).join('');
+  }
+  function renderClients() {
+    document.getElementById('clientList').innerHTML = clients.map(c => `
+      <div class="user-row">
+        <div class="avatar client">${initials(c.company)}</div>
+        <div class="user-info">
+          <div class="user-name">${c.company}</div>
+          <div class="user-meta">${c.name} · ${c.email}</div>
+        </div>
+        <span class="role-badge">${c.reports} rapports</span>
+      </div>
+    `).join('');
+  }
+  renderUsers();
+  renderClients();
+
+  /* ===== MODAL COMPTE ===== */
+  const accountModal = document.getElementById('accountModal');
+  const accountModalTitle = document.getElementById('accountModalTitle');
+  const roleGroup = document.getElementById('roleGroup');
+  const companyGroup = document.getElementById('companyGroup');
+  let accountModalMode = 'user';
+
+  function openAccountModal(mode) {
+    accountModalMode = mode;
+    accountModalTitle.textContent = mode === 'user' ? 'Nouvel utilisateur' : 'Nouveau client';
+    roleGroup.style.display = mode === 'user' ? 'block' : 'none';
+    companyGroup.style.display = mode === 'client' ? 'block' : 'none';
+    document.getElementById('accountName').value = '';
+    document.getElementById('accountEmail').value = '';
+    document.getElementById('accountCompany').value = '';
+    accountModal.classList.add('show');
+  }
+  document.getElementById('addUserBtn').addEventListener('click', () => openAccountModal('user'));
+  document.getElementById('addClientBtn').addEventListener('click', () => openAccountModal('client'));
+  document.getElementById('accountModalClose').addEventListener('click', () => accountModal.classList.remove('show'));
+  document.getElementById('accountModalCancel').addEventListener('click', () => accountModal.classList.remove('show'));
+  accountModal.addEventListener('click', e => { if (e.target === accountModal) accountModal.classList.remove('show'); });
+
+  document.getElementById('accountModalSave').addEventListener('click', () => {
+    const name = document.getElementById('accountName').value.trim();
+    const email = document.getElementById('accountEmail').value.trim();
+    if (!name || !email) return;
+    if (accountModalMode === 'user') {
+      users.push({ name, email, role: document.getElementById('accountRole').value });
+      renderUsers();
+    } else {
+      const company = document.getElementById('accountCompany').value.trim() || name;
+      clients.push({ name, company, email, reports: 0 });
+      renderClients();
+    }
+    accountModal.classList.remove('show');
+  });
+})();
+</script>
+
+</body>
+</html>

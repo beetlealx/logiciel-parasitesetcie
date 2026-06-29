@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/sign-out-button'
 import AppNav from '@/components/app-nav'
+import Image from 'next/image'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -13,17 +14,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-[#fafaf9]">
       <div className="sticky top-0 z-10">
         <header className="bg-white px-5 py-3.5 flex justify-between items-center border-b border-[#e7e5e4]">
-          <div className="flex items-center gap-2.5 font-semibold text-[15px]">
-            <span className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-semibold text-sm shrink-0">
-              P
-            </span>
-            <span>Parasites Compagnie</span>
+          <div className="flex items-center gap-2.5">
+            <Image src="/logo.png" alt="Parasites et Compagnie" width={36} height={36} className="rounded-lg shrink-0" />
+            <span className="font-semibold text-[15px]">Parasites et Compagnie</span>
           </div>
           <SignOutButton />
         </header>
         <AppNav />
       </div>
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6">
         {children}
       </main>
     </div>

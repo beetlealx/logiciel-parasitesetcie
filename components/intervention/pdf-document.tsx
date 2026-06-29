@@ -1,11 +1,8 @@
 import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer'
 
-export interface PDFPoste {
+export interface PDFArticle {
   label: string
-  etat: string | null
-  consommation: string | null
-  traces: string | null
-  action: string | null
+  releves: Record<string, unknown>
 }
 
 export interface PDFPhoto {
@@ -16,6 +13,11 @@ export interface PDFPhoto {
 export interface PDFBiocide {
   produit: string
   quantite: string
+  numero_amm?: string
+  substance_active?: string
+  zone_traitee?: string
+  mode_application?: string
+  delai_reentree?: string
 }
 
 export type PDFSeverity = 'forte' | 'moderee' | 'inactive' | 'non-releve'
@@ -23,7 +25,7 @@ export type PDFSeverity = 'forte' | 'moderee' | 'inactive' | 'non-releve'
 export interface PDFHistoryEntry {
   reference: string
   intervention_date: string
-  type_intervention: string | null
+  intervention_type: string | null
   severity: PDFSeverity
 }
 
@@ -32,18 +34,78 @@ export interface PDFData {
   intervention_date: string
   technician_name: string
   type_intervention: string | null
+  intervention_type?: string | null
+  extra_data?: Record<string, unknown> | null
   client_name: string
   client_address: string
   client_email: string | null
   synthese: string | null
   signataire_nom: string | null
   signature_data_url: string | null
-  postes: PDFPoste[]
+  postes: PDFArticle[]
   planBase64: string | null
   photos: PDFPhoto[]
   logoBase64?: string | null
   history?: PDFHistoryEntry[]
   biocides?: PDFBiocide[]
+}
+
+interface ArticleColumn { key: string; label: string; flex?: number }
+
+const ARTICLE_COLUMNS: Record<string, ArticleColumn[]> = {
+  rats: [
+    { key: 'etat', label: 'État' },
+    { key: 'consommation', label: 'Consommation' },
+    { key: 'traces', label: 'Traces' },
+    { key: 'action', label: 'Action' },
+  ],
+  frelons_guepes: [
+    { key: 'espece', label: 'Espèce', flex: 2 },
+    { key: 'hauteur', label: 'Haut. (m)' },
+    { key: 'localisation', label: 'Localisation', flex: 2 },
+    { key: 'neutralise', label: 'Neutralisé' },
+  ],
+  punaises_lit: [
+    { key: 'piece', label: 'Pièce', flex: 2 },
+    { key: 'infestation', label: 'Infestation' },
+    { key: 'methode', label: 'Méthode' },
+    { key: 'produit', label: 'Produit', flex: 2 },
+  ],
+  fourmis: [
+    { key: 'espece', label: 'Espèce', flex: 2 },
+    { key: 'type_traitement', label: 'Type' },
+    { key: 'produit', label: 'Produit', flex: 2 },
+  ],
+  cafards: [
+    { key: 'espece', label: 'Espèce', flex: 2 },
+    { key: 'infestation', label: 'Niveau' },
+    { key: 'produit', label: 'Produit', flex: 2 },
+  ],
+  moustiques: [
+    { key: 'espece', label: 'Espèce', flex: 2 },
+    { key: 'type_traitement', label: 'Type' },
+    { key: 'surface_m2', label: 'Surface (m²)' },
+    { key: 'produit', label: 'Produit', flex: 2 },
+  ],
+}
+
+const ARTICLES_TITLE: Record<string, string> = {
+  rats: "Postes d'appâtage",
+  frelons_guepes: 'Nids identifiés et traités',
+  punaises_lit: 'Zones traitées',
+  fourmis: 'Points de traitement',
+  cafards: 'Zones de traitement',
+  moustiques: 'Zones traitées',
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  rats:           'Dératisation',
+  frelons_guepes: 'Frelons & Guêpes',
+  punaises_lit:   'Punaises de lit',
+  fourmis:        'Fourmis',
+  cafards:        'Cafards / Blattes',
+  moustiques:     'Moustiques',
+  mixte:          'Multi-nuisibles',
 }
 
 const P = '#c0392b'
@@ -132,8 +194,24 @@ export function InterventionPDF(data: PDFData) {
   const photoRows: PDFPhoto[][] = []
   for (let i = 0; i < data.photos.length; i += 2) photoRows.push(data.photos.slice(i, i + 2))
 
+  const itype = data.intervention_type ?? 'rats'
+  const articleCols = ARTICLE_COLUMNS[itype] ?? ARTICLE_COLUMNS.rats
+  const articlesTitle = ARTICLES_TITLE[itype] ?? 'Relevés'
+  const extra = data.extra_data ?? {}
+  const especeIdentifiee = (extra.espece as string) ?? ''
+  const typeLabel = TYPE_LABELS[itype] ?? itype
+
+  // Extra data helpers
+  const conditions = (extra.conditions as Record<string, unknown>) ?? {}
+  const epiItems = (conditions.epi as Record<string, boolean>) ?? {}
+  const equipItems = (conditions.equipements as Record<string, boolean>) ?? {}
+  const accesNotes = (conditions.acces_notes as string) ?? ''
+  const etatInitial = (extra.etat_initial as Record<string, unknown>) ?? {}
+  const etatSignes = (etatInitial.signes as string[]) ?? []
+  const consignesPost = (extra.consignes_post as Record<string, unknown>) ?? {}
+
   return (
-    <Document title={data.reference} author="Parasites Compagnie">
+    <Document title={data.reference} author="Parasites et Compagnie">
       <Page size="A4" style={s.page}>
 
         {/* Header */}
@@ -143,13 +221,14 @@ export function InterventionPDF(data: PDFData) {
               <Image src={data.logoBase64} style={{ height: 36, width: 36, objectFit: 'contain' }} />
             )}
             <View>
-              <Text style={s.company}>Parasites Compagnie</Text>
+              <Text style={s.company}>Parasites et Compagnie</Text>
               <Text style={s.tagline}>Dératisation · Désinsectisation · Désinfection</Text>
             </View>
           </View>
           <View style={s.refBlock}>
             <Text style={s.refNum}>{data.reference}</Text>
             <Text style={s.refSub}>Compte rendu d'intervention</Text>
+            <Text style={[s.refSub, { marginTop: 4, color: P, fontFamily: 'Helvetica-Bold' }]}>{typeLabel}</Text>
           </View>
         </View>
 
@@ -158,9 +237,13 @@ export function InterventionPDF(data: PDFData) {
         <View style={s.infoBlock}>
           <View style={s.row}><Text style={s.lbl}>Date</Text><Text style={s.val}>{fmt(data.intervention_date)}</Text></View>
           <View style={s.row}><Text style={s.lbl}>Technicien</Text><Text style={s.val}>{data.technician_name}</Text></View>
-          {data.type_intervention && (
-            <View style={s.row}><Text style={s.lbl}>Type</Text><Text style={s.val}>{data.type_intervention}</Text></View>
-          )}
+          <View style={s.row}><Text style={s.lbl}>Nuisible</Text><Text style={s.val}>{typeLabel}</Text></View>
+          {especeIdentifiee ? (
+            <View style={s.row}><Text style={s.lbl}>Espèce identifiée</Text><Text style={s.val}>{especeIdentifiee}</Text></View>
+          ) : null}
+          {data.type_intervention ? (
+            <View style={s.row}><Text style={s.lbl}>Type d'intervention</Text><Text style={s.val}>{data.type_intervention}</Text></View>
+          ) : null}
         </View>
 
         {/* Client */}
@@ -175,6 +258,48 @@ export function InterventionPDF(data: PDFData) {
           )}
         </View>
 
+        {/* Conditions d'intervention (frelons) */}
+        {itype === 'frelons_guepes' && (
+          <>
+            <Text style={s.sectionTitle}>Conditions d'intervention</Text>
+            <View style={s.infoBlock}>
+              {Object.keys(epiItems).length > 0 && (
+                <View style={s.row}>
+                  <Text style={s.lbl}>EPI portés</Text>
+                  <Text style={s.val}>{Object.entries(epiItems).filter(([,v]) => v).map(([k]) => k.charAt(0).toUpperCase() + k.slice(1)).join(', ') || '—'}</Text>
+                </View>
+              )}
+              {Object.keys(equipItems).length > 0 && (
+                <View style={s.row}>
+                  <Text style={s.lbl}>Équipements</Text>
+                  <Text style={s.val}>{Object.entries(equipItems).filter(([,v]) => v).map(([k]) => k.charAt(0).toUpperCase() + k.slice(1)).join(', ') || '—'}</Text>
+                </View>
+              )}
+              {accesNotes ? (
+                <View style={s.row}><Text style={s.lbl}>Accès / notes</Text><Text style={s.val}>{accesNotes}</Text></View>
+              ) : null}
+            </View>
+          </>
+        )}
+
+        {/* État initial (punaises) */}
+        {itype === 'punaises_lit' && Object.keys(etatInitial).length > 0 && (
+          <>
+            <Text style={s.sectionTitle}>État initial du logement</Text>
+            <View style={s.infoBlock}>
+              {!!etatInitial.niveau_infestation ? (
+                <View style={s.row}><Text style={s.lbl}>Niveau d'infestation</Text><Text style={[s.val, { fontFamily: 'Helvetica-Bold' }]}>{String(etatInitial.niveau_infestation)}</Text></View>
+              ) : null}
+              {!!etatInitial.nb_pieces ? (
+                <View style={s.row}><Text style={s.lbl}>Pièces concernées</Text><Text style={s.val}>{String(etatInitial.nb_pieces)}</Text></View>
+              ) : null}
+              {etatSignes.length > 0 ? (
+                <View style={s.row}><Text style={s.lbl}>Signes observés</Text><Text style={s.val}>{etatSignes.join(' · ')}</Text></View>
+              ) : null}
+            </View>
+          </>
+        )}
+
         {/* Plan */}
         {data.planBase64 && (
           <>
@@ -183,25 +308,25 @@ export function InterventionPDF(data: PDFData) {
           </>
         )}
 
-        {/* Postes */}
+        {/* Articles */}
         {data.postes.length > 0 && (
           <>
-            <Text style={s.sectionTitle}>Relevés par poste</Text>
+            <Text style={s.sectionTitle}>{articlesTitle}</Text>
             <View style={s.table}>
               <View style={s.tHead}>
-                <Text style={s.tCellLabelH}>Poste</Text>
-                <Text style={s.tCellH}>État</Text>
-                <Text style={s.tCellH}>Consommation</Text>
-                <Text style={s.tCellH}>Traces</Text>
-                <Text style={s.tCellH}>Action</Text>
+                <Text style={s.tCellLabelH}>{itype === 'frelons_guepes' ? 'Nid' : itype === 'punaises_lit' ? 'Zone' : 'Réf.'}</Text>
+                {articleCols.map(c => (
+                  <Text key={c.key} style={[s.tCellH, c.flex ? { flex: c.flex } : {}]}>{c.label}</Text>
+                ))}
               </View>
               {data.postes.map((p, i) => (
                 <View key={i} style={s.tRow}>
                   <Text style={s.tCellLabel}>{p.label}</Text>
-                  <Text style={s.tCell}>{val(p.etat)}</Text>
-                  <Text style={s.tCell}>{val(p.consommation)}</Text>
-                  <Text style={s.tCell}>{val(p.traces)}</Text>
-                  <Text style={s.tCell}>{val(p.action)}</Text>
+                  {articleCols.map(c => {
+                    const raw = p.releves[c.key]
+                    const display = raw === true ? 'Oui' : raw === false ? 'Non' : raw != null ? String(raw) : '—'
+                    return <Text key={c.key} style={[s.tCell, c.flex ? { flex: c.flex } : {}]}>{display}</Text>
+                  })}
                 </View>
               ))}
             </View>
@@ -215,15 +340,32 @@ export function InterventionPDF(data: PDFData) {
             <View style={s.table}>
               <View style={s.tHead}>
                 <Text style={[s.tCellH, { flex: 2 }]}>Produit</Text>
+                <Text style={[s.tCellH, { flex: 1.5 }]}>Substance active</Text>
+                <Text style={s.tCellH}>N° AMM</Text>
                 <Text style={s.tCellH}>Quantité</Text>
+                <Text style={[s.tCellH, { flex: 1.5 }]}>Zone traitée</Text>
+                <Text style={s.tCellH}>Réentrée</Text>
               </View>
               {data.biocides.map((b, i) => (
                 <View key={i} style={s.tRow}>
                   <Text style={[s.tCell, { flex: 2 }]}>{b.produit || '—'}</Text>
+                  <Text style={[s.tCell, { flex: 1.5 }]}>{b.substance_active || '—'}</Text>
+                  <Text style={s.tCell}>{b.numero_amm || '—'}</Text>
                   <Text style={s.tCell}>{b.quantite || '—'}</Text>
+                  <Text style={[s.tCell, { flex: 1.5 }]}>{b.zone_traitee || '—'}</Text>
+                  <Text style={s.tCell}>{b.delai_reentree || '—'}</Text>
                 </View>
               ))}
             </View>
+            {data.biocides.some(b => b.mode_application) && (
+              <View style={{ marginTop: 4 }}>
+                {data.biocides.filter(b => b.mode_application).map((b, i) => (
+                  <Text key={i} style={{ fontSize: 8, color: '#57534e', marginBottom: 2 }}>
+                    {b.produit} — Mode d&apos;application : {b.mode_application}
+                  </Text>
+                ))}
+              </View>
+            )}
           </>
         )}
 
@@ -260,12 +402,29 @@ export function InterventionPDF(data: PDFData) {
           </>
         )}
 
+        {/* Consignes post-traitement (punaises) */}
+        {itype === 'punaises_lit' && Object.keys(consignesPost).length > 0 && (
+          <>
+            <Text style={s.sectionTitle}>Consignes post-traitement</Text>
+            <View style={s.infoBlock}>
+              {!!consignesPost.delai_reintegration ? (
+                <View style={s.row}><Text style={s.lbl}>Délai de réintégration</Text><Text style={[s.val, { fontFamily: 'Helvetica-Bold' }]}>{String(consignesPost.delai_reintegration)}</Text></View>
+              ) : null}
+              {!!consignesPost.nb_passages_prevus ? (
+                <View style={s.row}><Text style={s.lbl}>Passages prévus</Text><Text style={s.val}>{String(consignesPost.nb_passages_prevus)}</Text></View>
+              ) : null}
+              {!!consignesPost.consignes ? (
+                <View style={s.row}><Text style={s.lbl}>Consignes</Text><Text style={[s.val, { lineHeight: 1.6 }]}>{String(consignesPost.consignes)}</Text></View>
+              ) : null}
+            </View>
+          </>
+        )}
+
         {/* Historique des visites */}
         {data.history && data.history.length > 0 && (
           <>
             <Text break style={s.sectionTitle}>Historique des visites — {data.client_name}</Text>
             <View style={s.histTable}>
-              {/* Header */}
               <View style={s.histRow}>
                 <Text style={[s.histCellDate, { fontFamily: 'Helvetica-Bold', color: MUTED, fontSize: 7.5 }]}>Date</Text>
                 <Text style={[s.histCellType, { fontFamily: 'Helvetica-Bold', color: MUTED, fontSize: 7.5 }]}>Type</Text>
@@ -274,10 +433,10 @@ export function InterventionPDF(data: PDFData) {
               {data.history.map((h, i) => (
                 <View key={i} style={s.histRow}>
                   <Text style={s.histCellDate}>{fmt(h.intervention_date)}</Text>
-                  <Text style={s.histCellType}>{h.type_intervention ?? '—'}</Text>
+                  <Text style={s.histCellType}>{h.intervention_type ? (TYPE_LABELS[h.intervention_type] ?? h.intervention_type) : '—'}</Text>
                   <View style={s.histCellSev}>
                     <View style={[s.histDot, { backgroundColor: SEV_COLOR[h.severity] }]} />
-                    <Text style={{ fontSize: 8, color: SEV_COLOR[h.severity] }}>{SEV_LABEL[h.severity]}</Text>
+                    <Text style={{ fontSize: 8, color: h.severity === 'non-releve' ? MUTED : SEV_COLOR[h.severity] }}>{SEV_LABEL[h.severity]}</Text>
                   </View>
                 </View>
               ))}
@@ -303,7 +462,7 @@ export function InterventionPDF(data: PDFData) {
 
         {/* Footer */}
         <View style={s.footer} fixed>
-          <Text>Parasites Compagnie — {data.reference}</Text>
+          <Text>Parasites et Compagnie — {data.reference}</Text>
           <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
         </View>
 

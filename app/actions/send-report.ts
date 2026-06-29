@@ -1,67 +1,9 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
-import { generateInterventionPDF } from '@/lib/generate-pdf'
+import { sendInterventionEmail } from '@/lib/send-report-email'
 import { createActionCRM, createTiers } from '@/lib/dolibarr'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-
-function buildEmailHtml(data: {
-  reference: string
-  client_name: string
-  intervention_date: string
-  technician_name: string
-  type_intervention: string | null
-  synthese: string | null
-}) {
-  const dateStr = new Date(data.intervention_date).toLocaleDateString('fr-FR', {
-    day: '2-digit', month: 'long', year: 'numeric',
-  })
-  const type = data.type_intervention ? ` — ${data.type_intervention}` : ''
-  const synthese = data.synthese
-    ? `<p style="margin:16px 0 0;color:#44403c;line-height:1.6">${data.synthese.replace(/\n/g, '<br>')}</p>`
-    : ''
-
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9f9f8;font-family:Helvetica,Arial,sans-serif">
-  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e7e5e4">
-    <div style="background:#c0392b;padding:20px 28px;display:flex;align-items:center;gap:12px">
-      <div>
-        <div style="color:#fff;font-size:17px;font-weight:700;letter-spacing:-0.3px">Parasites Compagnie</div>
-        <div style="color:rgba(255,255,255,0.75);font-size:12px;margin-top:2px">Dératisation · Désinsectisation · Désinfection</div>
-      </div>
-    </div>
-    <div style="padding:28px">
-      <p style="margin:0 0 4px;font-size:13px;color:#78716c;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Compte rendu d'intervention</p>
-      <h1 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#1c1917">${data.reference}${type}</h1>
-      <table style="width:100%;border-collapse:collapse;font-size:14px">
-        <tr>
-          <td style="padding:8px 0;color:#78716c;width:120px">Date</td>
-          <td style="padding:8px 0;color:#1c1917;font-weight:500">${dateStr}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#78716c">Client</td>
-          <td style="padding:8px 0;color:#1c1917;font-weight:500">${data.client_name}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#78716c">Technicien</td>
-          <td style="padding:8px 0;color:#1c1917;font-weight:500">${data.technician_name}</td>
-        </tr>
-      </table>
-      ${synthese}
-      <p style="margin:24px 0 0;font-size:13px;color:#78716c">Le compte rendu complet est disponible en pièce jointe (PDF).</p>
-    </div>
-    <div style="background:#f9f9f8;padding:16px 28px;border-top:1px solid #e7e5e4;font-size:11.5px;color:#a8a29e">
-      Parasites Compagnie — interventions@parasites-compagnie.fr
-    </div>
-  </div>
-</body>
-</html>`
-}
 
 export type SendResult =
   | { ok: true; emailSent: boolean; crmCreated: boolean; tiersCreated: boolean; emailError?: string; tiersError?: string }
@@ -108,33 +50,13 @@ export async function sendReport(interventionId: string): Promise<SendResult> {
     }
   }
 
-  // Generate PDF
-  const pdf = await generateInterventionPDF(interventionId, supabase, user.id)
-  if (!pdf) return { ok: false, error: 'Échec de la génération du PDF' }
-
-  // Send email
+  // Send email (generates PDF internally)
   let emailSent = false
   let emailError: string | undefined
   if (iv.client_email) {
-    const { error: resendError } = await resend.emails.send({
-      from: `Parasites Compagnie <${process.env.RESEND_FROM_EMAIL ?? 'contact@parasites-compagnie.fr'}>`,
-      to: iv.client_email!,
-      subject: `Compte rendu d'intervention — ${iv.reference}`,
-      html: buildEmailHtml(iv),
-      attachments: [
-        {
-          filename: `${iv.reference}.pdf`,
-          content: pdf.buffer.toString('base64'),
-        },
-      ],
-    })
-    emailSent = !resendError
-    if (resendError) {
-      emailError = typeof resendError === 'object' && 'message' in resendError
-        ? String((resendError as { message: unknown }).message)
-        : JSON.stringify(resendError)
-      console.error('[Resend] send error:', resendError)
-    }
+    const emailResult = await sendInterventionEmail(interventionId, supabase, user.id)
+    emailSent = emailResult.sent
+    emailError = emailResult.error
   }
 
   // CRM Dolibarr (non-bloquant)

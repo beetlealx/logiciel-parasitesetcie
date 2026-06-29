@@ -7,10 +7,22 @@ interface Props {
   value: string
   onChange: (value: string) => void
   phraseTemplates: PhraseTemplate[]
+  interventionType?: string
+  espece?: string
   disabled?: boolean
 }
 
-export default function SyntheseSection({ value, onChange, phraseTemplates, disabled }: Props) {
+export default function SyntheseSection({ value, onChange, phraseTemplates, interventionType, espece, disabled }: Props) {
+  const visiblePhrases = phraseTemplates.filter(p => {
+    const typeOk = p.intervention_types.length === 0 || (interventionType && p.intervention_types.includes(interventionType))
+    const especeOk = !p.especes || p.especes.length === 0 || (espece && p.especes.includes(espece))
+    return typeOk && especeOk
+  })
+  const otherPhrases = phraseTemplates.filter(p => {
+    const typeOk = p.intervention_types.length === 0 || (interventionType && p.intervention_types.includes(interventionType))
+    const especeOk = !p.especes || p.especes.length === 0 || (espece && p.especes.includes(espece))
+    return !typeOk || !especeOk
+  })
   const [showPhrases, setShowPhrases] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -74,17 +86,17 @@ export default function SyntheseSection({ value, onChange, phraseTemplates, disa
               <path d="M19 9l-7 7-7-7"/>
             </svg>
             {showPhrases ? 'Masquer les phrases' : 'Insérer une phrase enregistrée'}
-            <span className="text-[11px] font-normal text-[#a8a29e]">({phraseTemplates.length})</span>
+            <span className="text-[11px] font-normal text-[#a8a29e]">({visiblePhrases.length})</span>
           </button>
 
           {showPhrases && (
             <div className="mt-2 border border-[#e7e5e4] rounded-xl overflow-hidden divide-y divide-[#f5f5f4]">
-              {phraseTemplates.length === 0 ? (
+              {visiblePhrases.length === 0 ? (
                 <p className="px-4 py-4 text-sm text-[#a8a29e]">
                   Aucune phrase — <a href="/phrases" target="_blank" className="text-primary underline underline-offset-2">gérer la bibliothèque</a>.
                 </p>
               ) : (
-                phraseTemplates.map(phrase => (
+                visiblePhrases.map(phrase => (
                   <button
                     key={phrase.id}
                     type="button"
@@ -102,6 +114,11 @@ export default function SyntheseSection({ value, onChange, phraseTemplates, disa
                     </span>
                   </button>
                 ))
+              )}
+              {otherPhrases.length > 0 && (
+                <div className="px-4 py-2 bg-[#fafaf9]">
+                  <p className="text-[11px] text-[#a8a29e]">{otherPhrases.length} phrase{otherPhrases.length > 1 ? 's' : ''} pour d'autres types masquée{otherPhrases.length > 1 ? 's' : ''}</p>
+                </div>
               )}
               <div className="px-4 py-2.5 bg-[#fafaf9]">
                 <a

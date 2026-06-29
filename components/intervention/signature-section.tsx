@@ -11,6 +11,8 @@ interface Props {
   isLocked: boolean
 }
 
+type EmailStatus = 'none' | 'sent' | 'no_email' | 'error'
+
 export default function SignatureSection({
   interventionId,
   initialSignatureUrl,
@@ -24,6 +26,7 @@ export default function SignatureSection({
   const [hasStrokes, setHasStrokes] = useState(false)
   const [signataire, setSignataire] = useState(initialSignataireNom ?? '')
   const [signing, setSigning] = useState(false)
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>('none')
 
   // Init canvas context style
   useEffect(() => {
@@ -84,7 +87,10 @@ export default function SignatureSection({
     if (!signataire.trim() || !hasStrokes || signing) return
     setSigning(true)
     const dataUrl = canvasRef.current!.toDataURL('image/png')
-    await signIntervention(interventionId, signataire, dataUrl)
+    const result = await signIntervention(interventionId, signataire, dataUrl)
+    if (result.emailSent) setEmailStatus('sent')
+    else if (!result.clientEmail) setEmailStatus('no_email')
+    else setEmailStatus('error')
     router.refresh()
   }
 
@@ -98,6 +104,19 @@ export default function SignatureSection({
           </svg>
           Signé par {initialSignataireNom}
         </div>
+        {emailStatus === 'sent' && (
+          <div className="flex items-center gap-2 text-[12.5px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+            Rapport envoyé automatiquement par email au client.
+          </div>
+        )}
+        {emailStatus === 'error' && (
+          <div className="text-[12px] text-amber-700 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg">
+            L'envoi automatique a échoué — utilisez le bouton "Envoyer" pour réessayer.
+          </div>
+        )}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={initialSignatureUrl}

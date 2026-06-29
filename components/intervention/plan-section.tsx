@@ -3,17 +3,26 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   uploadPlanImage,
-  createPoste,
-  updatePostePosition,
-  updatePosteLabel,
-  deletePoste,
-  type PosteRow,
+  createArticle,
+  updateArticlePosition,
+  updateArticleLabel,
+  deleteArticle,
+  type ArticleRow,
 } from '@/app/actions/plan'
+import {
+  INTERVENTION_TEMPLATES,
+  MIXTE_META,
+  ARTICLE_TYPE_FOR_INTERVENTION,
+  INTERVENTION_TYPE_ORDER,
+  getArticleColor,
+  type InterventionType,
+} from '@/lib/intervention-templates'
 
 interface Props {
   interventionId: string
-  postes: PosteRow[]
-  onPostesChange: (postes: PosteRow[]) => void
+  interventionType: InterventionType
+  articles: ArticleRow[]
+  onArticlesChange: (articles: ArticleRow[]) => void
   initialPlanPath: string | null
   initialPlanUrl: string
   disabled?: boolean
@@ -21,18 +30,26 @@ interface Props {
 
 export default function PlanSection({
   interventionId,
-  postes,
-  onPostesChange,
+  interventionType,
+  articles,
+  onArticlesChange,
   initialPlanPath,
   initialPlanUrl,
   disabled,
 }: Props) {
+  const template = interventionType !== 'mixte' ? INTERVENTION_TEMPLATES[interventionType] : null
+  const defaultPrefix = template?.article_prefix ?? 'P'
+  const defaultArticleType = interventionType !== 'mixte'
+    ? ARTICLE_TYPE_FOR_INTERVENTION[interventionType]
+    : 'poste_appatage'
+  const defaultColor = interventionType !== 'mixte' ? template!.color : MIXTE_META.color
   // Local copy for smooth drag — synced from parent on committed changes
-  const [localPostes, setLocalPostes] = useState<PosteRow[]>(postes)
+  const [localArticles, setLocalArticles] = useState<ArticleRow[]>(articles)
   const [planUrl, setPlanUrl] = useState(initialPlanUrl)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [pendingClick, setPendingClick] = useState<{ x: number; y: number } | null>(null)
   const [dragging, setDragging] = useState<{
     id: string
     startX: number
@@ -43,14 +60,14 @@ export default function PlanSection({
 
   const containerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const postesRef = useRef(localPostes)
-  const onPostesChangeRef = useRef(onPostesChange)
+  const articlesRef = useRef(localArticles)
+  const onArticlesChangeRef = useRef(onArticlesChange)
   const hasMoved = useRef(false)
 
-  useEffect(() => { postesRef.current = localPostes }, [localPostes])
-  useEffect(() => { onPostesChangeRef.current = onPostesChange }, [onPostesChange])
-  // Sync parent → local when postes are added/removed outside this component
-  useEffect(() => { setLocalPostes(postes) }, [postes])
+  useEffect(() => { articlesRef.current = localArticles }, [localArticles])
+  useEffect(() => { onArticlesChangeRef.current = onArticlesChange }, [onArticlesChange])
+  // Sync parent → local when articles are added/removed outside this component
+  useEffect(() => { setLocalArticles(articles) }, [articles])
 
   // Global pointer listeners during drag
   useEffect(() => {
@@ -67,7 +84,7 @@ export default function PlanSection({
       const newX = Math.max(2, Math.min(98, dragging!.origX + dx))
       const newY = Math.max(2, Math.min(98, dragging!.origY + dy))
       lastPos = { x: newX, y: newY }
-      setLocalPostes(ps =>
+      setLocalArticles(ps =>
         ps.map(p => p.id === dragging!.id ? { ...p, x: newX, y: newY } : p)
       )
     }
@@ -75,11 +92,11 @@ export default function PlanSection({
     function onUp() {
       if (hasMoved.current && lastPos) {
         const { x, y } = lastPos
-        updatePostePosition(dragging!.id, x, y)
-        const committed = postesRef.current.map(p =>
+        updateArticlePosition(dragging!.id, x, y)
+        const committed = articlesRef.current.map(p =>
           p.id === dragging!.id ? { ...p, x, y } : p
         )
-        onPostesChangeRef.current(committed)
+        onArticlesChangeRef.current(committed)
       }
       setDragging(null)
       hasMoved.current = false
@@ -93,7 +110,7 @@ export default function PlanSection({
     }
   }, [dragging])
 
-  const selectedPoste = localPostes.find(p => p.id === selectedId) ?? null
+  const selectedArticle = localArticles.find(p => p.id === selectedId) ?? null
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -109,57 +126,80 @@ export default function PlanSection({
 
   async function handleMapClick(e: React.MouseEvent<HTMLDivElement>) {
     if (disabled || hasMoved.current) return
+    if (pendingClick) { setPendingClick(null); return }
     if (selectedId) { setSelectedId(null); return }
 
     const rect = containerRef.current!.getBoundingClientRect()
     const x = Number(((e.clientX - rect.left) / rect.width * 100).toFixed(2))
     const y = Number(((e.clientY - rect.top) / rect.height * 100).toFixed(2))
-    const n = postesRef.current.length + 1
-    const label = `P${n}`
 
-    const newPoste = await createPoste(interventionId, label, x, y)
-    if (newPoste) {
-      const updated = [...postesRef.current, newPoste]
-      setLocalPostes(updated)
-      onPostesChangeRef.current(updated)
-      setSelectedId(newPoste.id)
-      setEditLabel(newPoste.label)
+    if (interventionType === 'mixte') {
+      setPendingClick({ x, y })
+      return
+    }
+
+    const n = articlesRef.current.length + 1
+    const label = `${defaultPrefix}${n}`
+    const newArticle = await createArticle(interventionId, label, x, y, defaultArticleType)
+    if (newArticle) {
+      const updated = [...articlesRef.current, newArticle]
+      setLocalArticles(updated)
+      onArticlesChangeRef.current(updated)
+      setSelectedId(newArticle.id)
+      setEditLabel(newArticle.label)
     }
   }
 
-  function handlePostePointerDown(e: React.PointerEvent, poste: PosteRow) {
+  async function handleSubTypeSelect(subType: Exclude<InterventionType, 'mixte'>) {
+    if (!pendingClick) return
+    const tpl = INTERVENTION_TEMPLATES[subType]
+    const articleType = ARTICLE_TYPE_FOR_INTERVENTION[subType]
+    const count = articlesRef.current.filter(a => a.article_type === articleType).length
+    const label = `${tpl.article_prefix}${count + 1}`
+    const newArticle = await createArticle(interventionId, label, pendingClick.x, pendingClick.y, articleType)
+    if (newArticle) {
+      const updated = [...articlesRef.current, newArticle]
+      setLocalArticles(updated)
+      onArticlesChangeRef.current(updated)
+      setSelectedId(newArticle.id)
+      setEditLabel(newArticle.label)
+    }
+    setPendingClick(null)
+  }
+
+  function handleArticlePointerDown(e: React.PointerEvent, article: ArticleRow) {
     e.preventDefault()
     e.stopPropagation()
     hasMoved.current = false
-    setDragging({ id: poste.id, startX: e.clientX, startY: e.clientY, origX: poste.x, origY: poste.y })
+    setDragging({ id: article.id, startX: e.clientX, startY: e.clientY, origX: article.x, origY: article.y })
   }
 
-  function handlePosteClick(e: React.MouseEvent, poste: PosteRow) {
+  function handleArticleClick(e: React.MouseEvent, article: ArticleRow) {
     e.stopPropagation()
     if (hasMoved.current) return
-    if (selectedId === poste.id) {
+    if (selectedId === article.id) {
       setSelectedId(null)
     } else {
-      setSelectedId(poste.id)
-      setEditLabel(poste.label)
+      setSelectedId(article.id)
+      setEditLabel(article.label)
     }
   }
 
   async function handleLabelBlur() {
     if (!selectedId || !editLabel.trim()) return
     const trimmed = editLabel.trim()
-    await updatePosteLabel(selectedId, trimmed)
-    const updated = postesRef.current.map(p => p.id === selectedId ? { ...p, label: trimmed } : p)
-    setLocalPostes(updated)
-    onPostesChangeRef.current(updated)
+    await updateArticleLabel(selectedId, trimmed)
+    const updated = articlesRef.current.map(p => p.id === selectedId ? { ...p, label: trimmed } : p)
+    setLocalArticles(updated)
+    onArticlesChangeRef.current(updated)
   }
 
-  async function handleDeletePoste() {
+  async function handleDeleteArticle() {
     if (!selectedId) return
-    await deletePoste(selectedId)
-    const updated = postesRef.current.filter(p => p.id !== selectedId)
-    setLocalPostes(updated)
-    onPostesChangeRef.current(updated)
+    await deleteArticle(selectedId)
+    const updated = articlesRef.current.filter(p => p.id !== selectedId)
+    setLocalArticles(updated)
+    onArticlesChangeRef.current(updated)
     setSelectedId(null)
   }
 
@@ -206,35 +246,84 @@ export default function PlanSection({
               draggable={false}
             />
 
-            {/* Postes */}
-            {localPostes.map(poste => (
-              <div
-                key={poste.id}
-                className="absolute"
-                style={{ left: `${poste.x}%`, top: `${poste.y}%` }}
-              >
-                <button
-                  type="button"
-                  className={`
-                    -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center
-                    text-[11px] font-bold shadow-md border-2 transition-transform
-                    ${selectedId === poste.id
-                      ? 'bg-primary text-white border-white ring-2 ring-primary ring-offset-1 scale-110'
-                      : 'bg-white text-primary border-primary hover:scale-105 active:scale-110'
-                    }
-                    ${dragging?.id === poste.id ? 'cursor-grabbing scale-110' : 'cursor-grab'}
-                  `}
-                  onPointerDown={e => !disabled && handlePostePointerDown(e, poste)}
-                  onClick={e => handlePosteClick(e, poste)}
+            {/* Articles */}
+            {localArticles.map(article => {
+              const color = getArticleColor(interventionType, article.article_type)
+              const isSelected = selectedId === article.id
+              const isDragging = dragging?.id === article.id
+              return (
+                <div
+                  key={article.id}
+                  className="absolute"
+                  style={{ left: `${article.x}%`, top: `${article.y}%` }}
                 >
-                  {poste.label}
-                </button>
+                  <button
+                    type="button"
+                    className={`
+                      -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center
+                      text-[11px] font-bold shadow-md border-2 transition-transform
+                      ${isDragging ? 'cursor-grabbing scale-110' : 'cursor-grab'}
+                    `}
+                    style={isSelected
+                      ? { backgroundColor: color, color: 'white', borderColor: 'white', outline: `3px solid ${color}`, outlineOffset: '1px', transform: 'translate(-50%, -50%) scale(1.1)' }
+                      : { backgroundColor: 'white', color, borderColor: color }
+                    }
+                    onPointerDown={e => !disabled && handleArticlePointerDown(e, article)}
+                    onClick={e => handleArticleClick(e, article)}
+                  >
+                    {article.label}
+                  </button>
+                </div>
+              )
+            })}
+
+            {/* Pending click marker (mixte) */}
+            {pendingClick && (
+              <div
+                className="absolute pointer-events-none"
+                style={{ left: `${pendingClick.x}%`, top: `${pendingClick.y}%` }}
+              >
+                <div className="-translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full border-2 border-dashed border-[#78716c] bg-white/60 animate-pulse" />
               </div>
-            ))}
+            )}
+
+            {/* Mixte sub-type picker popover */}
+            {pendingClick && (
+              <div
+                className="absolute z-20 bg-white rounded-xl shadow-xl border border-[#e7e5e4] p-3 w-52"
+                style={{
+                  left: `${Math.min(Math.max(pendingClick.x, 25), 75)}%`,
+                  ...(pendingClick.y > 60
+                    ? { bottom: `${100 - pendingClick.y + 6}%` }
+                    : { top: `${pendingClick.y + 6}%` }),
+                  transform: 'translateX(-50%)',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <p className="text-[11px] text-[#78716c] font-medium mb-2 text-center">Quel type de nuisible ?</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(INTERVENTION_TYPE_ORDER.filter(t => t !== 'mixte') as Exclude<InterventionType, 'mixte'>[]).map(subType => {
+                    const tpl = INTERVENTION_TEMPLATES[subType]
+                    return (
+                      <button
+                        key={subType}
+                        type="button"
+                        onClick={() => handleSubTypeSelect(subType)}
+                        className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[12px] font-medium text-white transition-opacity hover:opacity-90"
+                        style={{ backgroundColor: tpl.color }}
+                      >
+                        <span>{tpl.icon}</span>
+                        <span className="truncate">{tpl.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Edit panel */}
-          {selectedPoste && (
+          {selectedArticle && (
             <div className="flex items-center gap-2 bg-[#fafaf9] border border-[#e7e5e4] rounded-xl px-3 py-2.5">
               <span className="text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium shrink-0">Étiquette</span>
               <input
@@ -248,11 +337,11 @@ export default function PlanSection({
                 className="w-20 px-2 py-1.5 border border-[#d6d3d1] rounded-lg text-sm text-center font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
               />
               <span className="text-[12px] text-[#a8a29e] flex-1">
-                Position : {selectedPoste.x.toFixed(0)}%, {selectedPoste.y.toFixed(0)}%
+                Position : {selectedArticle.x.toFixed(0)}%, {selectedArticle.y.toFixed(0)}%
               </span>
               <button
                 type="button"
-                onClick={handleDeletePoste}
+                onClick={handleDeleteArticle}
                 disabled={disabled}
                 className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                 title="Supprimer"
@@ -277,7 +366,9 @@ export default function PlanSection({
           {/* Footer */}
           <div className="flex items-center justify-between">
             <span className="text-[12px] text-[#a8a29e]">
-              {disabled ? '' : selectedId ? 'Déplacez le poste ou modifiez son étiquette' : `Appuyez sur le plan pour ajouter un poste · ${localPostes.length} poste${localPostes.length !== 1 ? 's' : ''}`}
+              {disabled ? '' : selectedId
+                ? "Déplacez ou modifiez l'étiquette"
+                : `Appuyez pour ajouter · ${localArticles.length} ${template?.article_label ?? 'article'}${localArticles.length !== 1 ? 's' : ''}`}
             </span>
             {!disabled && (
               <button

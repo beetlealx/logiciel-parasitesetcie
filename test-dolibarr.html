@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Dolibarr · Parasites Compagnie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-2: #f5f5f4;
+    --border: #e7e5e4;
+    --border-strong: #d6d3d1;
+    --text: #1c1917;
+    --text-muted: #57534e;
+    --text-dim: #a8a29e;
+    --primary: #0d7d6e;
+    --primary-dark: #0a5e53;
+    --primary-light: #d1f5ed;
+    --primary-text: #064e44;
+    --success: #16a34a;
+    --success-light: #dcfce7;
+    --success-text: #14532d;
+    --error: #b91c1c;
+    --error-light: #fef2f2;
+    --error-text: #7f1d1d;
+    --warning: #b45309;
+    --warning-light: #fef3c7;
+    --warning-text: #78350f;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Geist', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .mono { font-family: 'Geist Mono', monospace; font-size: 12.5px; }
+  .app { max-width: 900px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 {
+    font-size: 22px; font-weight: 600; margin: 0 0 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .brand-dot {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--primary); color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 600;
+  }
+  .subtitle { color: var(--text-muted); margin: 0 0 24px; font-size: 14px; }
+
+  .alert {
+    background: var(--warning-light);
+    border-left: 3px solid var(--warning);
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--warning-text);
+  }
+  .alert strong { font-weight: 600; }
+  .alert code {
+    background: rgba(180, 83, 9, 0.12);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: 'Geist Mono', monospace; font-size: 12px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 15px; font-weight: 600;
+    margin: 0 0 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--primary-light); color: var(--primary-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
+  }
+  .card-desc { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
+
+  .form-group { margin-bottom: 12px; }
+  .form-group label {
+    display: block;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+  .form-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13, 125, 110, 0.15);
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+  .btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+  .btn:hover:not(:disabled) { background: var(--primary-dark); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+  }
+  .btn-secondary:hover:not(:disabled) { background: var(--border); }
+  .btn-danger { background: var(--error); }
+  .btn-danger:hover:not(:disabled) { background: #991b1b; }
+  .btn svg { width: 14px; height: 14px; }
+
+  .result {
+    margin-top: 14px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .result-header {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .result-header.success { background: var(--success-light); color: var(--success-text); }
+  .result-header.error { background: var(--error-light); color: var(--error-text); }
+  .result-header.warning { background: var(--warning-light); color: var(--warning-text); }
+  .result-header.info { background: var(--surface-2); color: var(--text-muted); }
+  .result-body {
+    padding: 14px;
+    background: var(--surface);
+    max-height: 300px;
+    overflow: auto;
+  }
+  .result-body pre {
+    margin: 0;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text);
+  }
+
+  .curl-block {
+    margin-top: 12px;
+    background: #1c1917;
+    color: #fafaf9;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    position: relative;
+  }
+  .curl-block code { color: #d1f5ed; }
+  .curl-copy {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .curl-copy:hover { background: rgba(255,255,255,0.2); }
+  .curl-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin: 10px 0 6px;
+    font-weight: 500;
+  }
+
+  .summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 20px;
+  }
+  .summary-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin: 0 0 10px;
+    font-weight: 500;
+  }
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+  .summary-item:last-child { border-bottom: none; }
+  .summary-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--border-strong);
+    flex-shrink: 0;
+  }
+  .summary-dot.success { background: var(--success); }
+  .summary-dot.error { background: var(--error); }
+  .summary-dot.warning { background: var(--warning); }
+
+  .danger-zone {
+    margin-top: 8px;
+    padding: 12px 14px;
+    background: var(--error-light);
+    border-radius: 7px;
+    font-size: 12.5px;
+    color: var(--error-text);
+  }
+  .danger-zone strong { font-weight: 600; }
+
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  details { margin-top: 12px; }
+  details summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 6px 0;
+    user-select: none;
+  }
+  details summary:hover { color: var(--text); }
+  details[open] summary { color: var(--text); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <h1><span class="brand-dot">P</span> Test Dolibarr</h1>
+  <p class="subtitle">Outil de validation de l'intégration API Dolibarr avant le démarrage du projet Claude Code.</p>
+
+  <div class="alert">
+    <strong>À propos des erreurs CORS :</strong> par défaut, Dolibarr n'autorise pas les appels API depuis un navigateur sur un autre domaine. Les tests directs ci-dessous échoueront probablement avec une erreur réseau ou CORS. <strong>C'est normal et ce n'est pas un blocage</strong> — les appels API se feront depuis le serveur Next.js dans l'app finale, où CORS ne s'applique pas. Utilisez les commandes <code>curl</code> générées pour valider depuis votre terminal.
+  </div>
+
+  <!-- CONFIGURATION -->
+  <div class="card">
+    <h3 class="card-title"><span class="card-num">0</span>Configuration</h3>
+    <p class="card-desc">Renseignez l'URL de votre API Dolibarr et votre clé API. Ces valeurs ne sont pas envoyées ailleurs ; elles restent dans votre navigateur (session courante uniquement).</p>
+
+    <div class="form-group">
+      <label>URL de l'API Dolibarr</label>
+      <input type="text" id="dolibarrUrl" class="form-input" placeholder="https://dolibarr.exemple.fr/api/index.php" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Clé API (DOLAPIKEY)</label>
+      <input type="password" id="dolibarrKey" class="form-input" placeholder="Votre clé API" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- TEST 1 -->
+  <div class="card">
+    <h3 class="card-title"><span class="card-num">1</span>Test connectivité (lecture)</h3>
+    <p class="card-desc">Récupère 1 tiers de votre Dolibarr pour valider l'URL et la clé API.</p>
+    <div class="actions">
+      <button class="btn" onclick="runTest1()">Lancer le test</button>
+      <button class="btn btn-secondary" onclick="showCurl1()">Voir la commande curl</button>
+    </div>
+    <div id="result1"></div>
+  </div>
+
+  <!-- TEST 2 -->
+  <div class="card">
+    <h3 class="card-title"><span class="card-num">2</span>Test recherche tiers</h3>
+    <p class="card-desc">Cherche des tiers dont le nom contient la chaîne ci-dessous (utilisée par l'autocomplétion de l'app).</p>
+
+    <div class="form-group">
+      <label>Recherche (nom partiel)</label>
+      <input type="text" id="searchQuery" class="form-input" value="restaurant" autocomplete="off">
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="runTest2()">Lancer le test</button>
+      <button class="btn btn-secondary" onclick="showCurl2()">Voir la commande curl</button>
+    </div>
+    <div id="result2"></div>
+  </div>
+
+  <!-- TEST 3 -->
+  <div class="card">
+    <h3 class="card-title"><span class="card-num">3</span>Test info utilisateur courant</h3>
+    <p class="card-desc">Récupère l'ID de l'utilisateur Dolibarr lié à votre clé API. Cet ID est à reporter dans <code class="mono">DOLIBARR_USER_OWNER_ID</code> du fichier <code class="mono">.env</code> de l'app.</p>
+    <div class="actions">
+      <button class="btn" onclick="runTest3()">Lancer le test</button>
+      <button class="btn btn-secondary" onclick="showCurl3()">Voir la commande curl</button>
+    </div>
+    <div id="result3"></div>
+  </div>
+
+  <!-- TEST 4 -->
+  <div class="card">
+    <h3 class="card-title"><span class="card-num">4</span>Test création action CRM <span style="font-size:11px;font-weight:500;color:var(--warning);background:var(--warning-light);padding:2px 8px;border-radius:999px;margin-left:6px;">écriture réelle</span></h3>
+    <p class="card-desc">Crée une action CRM de test sur un tiers existant. Ce test simule ce que fait l'app à la fin de chaque intervention.</p>
+
+    <div class="danger-zone">
+      <strong>⚠️ Attention :</strong> ce test crée une vraie ligne dans votre Dolibarr. La commande de suppression (curl <code>DELETE</code>) est fournie dans le résultat pour nettoyer ensuite.
+    </div>
+
+    <div class="form-row" style="margin-top:12px;">
+      <div class="form-group">
+        <label>ID du tiers de test (socid)</label>
+        <input type="number" id="testSocid" class="form-input" placeholder="ex: 42" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>ID utilisateur propriétaire (userownerid)</label>
+        <input type="number" id="testUserId" class="form-input" placeholder="ex: 1 (cf. test 3)" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-danger" onclick="runTest4()">Créer une action de test</button>
+      <button class="btn btn-secondary" onclick="showCurl4()">Voir la commande curl</button>
+    </div>
+    <div id="result4"></div>
+  </div>
+
+  <!-- SYNTHÈSE -->
+  <div class="summary">
+    <h4 class="summary-title">Synthèse des tests</h4>
+    <div class="summary-item">
+      <span class="summary-dot" id="dot1"></span>
+      <span><strong>Test 1</strong> · Connectivité — <span id="status1" style="color:var(--text-muted);">non lancé</span></span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-dot" id="dot2"></span>
+      <span><strong>Test 2</strong> · Recherche tiers — <span id="status2" style="color:var(--text-muted);">non lancé</span></span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-dot" id="dot3"></span>
+      <span><strong>Test 3</strong> · Info utilisateur — <span id="status3" style="color:var(--text-muted);">non lancé</span></span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-dot" id="dot4"></span>
+      <span><strong>Test 4</strong> · Création action CRM — <span id="status4" style="color:var(--text-muted);">non lancé</span></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+
+  // === PERSISTANCE LÉGÈRE EN SESSION STORAGE ===
+  const urlInput = document.getElementById('dolibarrUrl');
+  const keyInput = document.getElementById('dolibarrKey');
+
+  urlInput.value = sessionStorage.getItem('dol_url') || '';
+  keyInput.value = sessionStorage.getItem('dol_key') || '';
+  urlInput.addEventListener('input', () => sessionStorage.setItem('dol_url', urlInput.value));
+  keyInput.addEventListener('input', () => sessionStorage.setItem('dol_key', keyInput.value));
+
+  // === UTILS ===
+  function getConfig() {
+    const url = urlInput.value.trim().replace(/\/$/, '');
+    const key = keyInput.value.trim();
+    if (!url || !key) {
+      alert('Merci de renseigner l\'URL de l\'API Dolibarr et la clé API en section 0.');
+      return null;
+    }
+    return { url, key };
+  }
+
+  function shellEscape(s) {
+    return "'" + String(s).replace(/'/g, "'\\''") + "'";
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderResult(slot, type, title, body, curlCmd) {
+    const el = document.getElementById('result' + slot);
+    let html = `<div class="result"><div class="result-header ${type}">`;
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'warning' ? '⚠' : 'ℹ';
+    html += `<span>${icon}</span><span>${escapeHtml(title)}</span></div>`;
+    if (body) {
+      html += `<div class="result-body"><pre>${escapeHtml(body)}</pre></div>`;
+    }
+    html += `</div>`;
+    if (curlCmd) {
+      html += `
+        <div class="curl-label">Commande curl équivalente :</div>
+        <div class="curl-block">
+          <button class="curl-copy" onclick="window.copyCurl(this)">Copier</button>
+          <code>${escapeHtml(curlCmd)}</code>
+        </div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  function setStatus(slot, type, label) {
+    document.getElementById('dot' + slot).className = 'summary-dot ' + type;
+    const colors = { success: 'var(--success-text)', error: 'var(--error-text)', warning: 'var(--warning-text)' };
+    document.getElementById('status' + slot).style.color = colors[type] || 'var(--text-muted)';
+    document.getElementById('status' + slot).textContent = label;
+  }
+
+  window.copyCurl = function(btn) {
+    const code = btn.parentElement.querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copié ✓';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    });
+  };
+
+  async function callApi(method, endpoint, body) {
+    const cfg = getConfig();
+    if (!cfg) return null;
+    const fullUrl = cfg.url + endpoint;
+    const opts = {
+      method,
+      headers: { 'DOLAPIKEY': cfg.key, 'Accept': 'application/json' }
+    };
+    if (body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(fullUrl, opts);
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch(e) {}
+    return { status: res.status, ok: res.ok, text, json, url: fullUrl };
+  }
+
+  function buildCurl(method, endpoint, body) {
+    const cfg = getConfig() || { url: '<DOLIBARR_API_URL>', key: '<DOLAPIKEY>' };
+    let cmd = `curl -X ${method} ${shellEscape(cfg.url + endpoint)} \\\n  -H ${shellEscape('DOLAPIKEY: ' + cfg.key)} \\\n  -H 'Accept: application/json'`;
+    if (body) {
+      cmd += ` \\\n  -H 'Content-Type: application/json' \\\n  -d ${shellEscape(JSON.stringify(body))}`;
+    }
+    return cmd;
+  }
+
+  // === TEST 1 : Connectivité ===
+  const endpoint1 = '/thirdparties?limit=1';
+  window.showCurl1 = function() {
+    renderResult(1, 'info', 'Commande curl prête à exécuter dans votre terminal', null, buildCurl('GET', endpoint1));
+  };
+  window.runTest1 = async function() {
+    const cfg = getConfig(); if (!cfg) return;
+    try {
+      const r = await callApi('GET', endpoint1);
+      if (r.ok && Array.isArray(r.json)) {
+        renderResult(1, 'success',
+          `Connexion réussie · ${r.json.length} tiers récupéré (HTTP ${r.status})`,
+          JSON.stringify(r.json, null, 2),
+          buildCurl('GET', endpoint1));
+        setStatus(1, 'success', 'OK');
+      } else {
+        const msg = r.status === 401 ? 'Clé API rejetée (401). Vérifiez la valeur de DOLAPIKEY et les droits de l\'utilisateur.'
+                  : r.status === 404 ? 'Endpoint introuvable (404). Vérifiez l\'URL et que le module API REST est activé dans Dolibarr.'
+                  : `Erreur HTTP ${r.status}`;
+        renderResult(1, 'error', msg, r.text.slice(0, 1000), buildCurl('GET', endpoint1));
+        setStatus(1, 'error', msg);
+      }
+    } catch (e) {
+      renderResult(1, 'warning',
+        'Appel bloqué par le navigateur (CORS ou réseau). Utilisez la commande curl ci-dessous depuis votre terminal.',
+        e.message,
+        buildCurl('GET', endpoint1));
+      setStatus(1, 'warning', 'Bloqué par CORS — tester en terminal');
+    }
+  };
+
+  // === TEST 2 : Recherche tiers ===
+  function endpoint2() {
+    const q = document.getElementById('searchQuery').value.trim();
+    return `/thirdparties?sqlfilters=(t.nom%3Alike%3A'%25${encodeURIComponent(q)}%25')&limit=5`;
+  }
+  function endpoint2Raw() {
+    const q = document.getElementById('searchQuery').value.trim();
+    return `/thirdparties?sqlfilters=(t.nom:like:'%${q}%')&limit=5`;
+  }
+  window.showCurl2 = function() {
+    renderResult(2, 'info', 'Commande curl prête à exécuter', null, buildCurl('GET', endpoint2Raw()));
+  };
+  window.runTest2 = async function() {
+    const cfg = getConfig(); if (!cfg) return;
+    try {
+      const r = await callApi('GET', endpoint2());
+      if (r.ok && Array.isArray(r.json)) {
+        const simplified = r.json.map(t => ({ id: t.id, nom: t.name || t.nom, ville: t.town, email: t.email }));
+        renderResult(2, 'success',
+          `${r.json.length} tiers trouvé(s) (HTTP ${r.status})`,
+          JSON.stringify(simplified, null, 2),
+          buildCurl('GET', endpoint2Raw()));
+        setStatus(2, 'success', `${r.json.length} résultat(s)`);
+      } else {
+        renderResult(2, 'error', `Erreur HTTP ${r.status}`, r.text.slice(0, 1000), buildCurl('GET', endpoint2Raw()));
+        setStatus(2, 'error', `HTTP ${r.status}`);
+      }
+    } catch (e) {
+      renderResult(2, 'warning',
+        'Appel bloqué par le navigateur (CORS ou réseau).',
+        e.message,
+        buildCurl('GET', endpoint2Raw()));
+      setStatus(2, 'warning', 'Bloqué par CORS');
+    }
+  };
+
+  // === TEST 3 : Info utilisateur courant ===
+  const endpoint3 = '/users/info';
+  window.showCurl3 = function() {
+    renderResult(3, 'info', 'Commande curl prête à exécuter', null, buildCurl('GET', endpoint3));
+  };
+  window.runTest3 = async function() {
+    const cfg = getConfig(); if (!cfg) return;
+    try {
+      const r = await callApi('GET', endpoint3);
+      if (r.ok && r.json) {
+        const id = r.json.id || r.json.userid || '?';
+        renderResult(3, 'success',
+          `Utilisateur identifié · ID = ${id} (à reporter dans DOLIBARR_USER_OWNER_ID)`,
+          JSON.stringify({ id: r.json.id, login: r.json.login, firstname: r.json.firstname, lastname: r.json.lastname, email: r.json.email }, null, 2),
+          buildCurl('GET', endpoint3));
+        setStatus(3, 'success', `ID utilisateur : ${id}`);
+      } else {
+        renderResult(3, 'error', `Erreur HTTP ${r.status}`, r.text.slice(0, 1000), buildCurl('GET', endpoint3));
+        setStatus(3, 'error', `HTTP ${r.status}`);
+      }
+    } catch (e) {
+      renderResult(3, 'warning',
+        'Appel bloqué par le navigateur (CORS ou réseau).',
+        e.message,
+        buildCurl('GET', endpoint3));
+      setStatus(3, 'warning', 'Bloqué par CORS');
+    }
+  };
+
+  // === TEST 4 : Création action CRM ===
+  function buildActionPayload() {
+    const socid = parseInt(document.getElementById('testSocid').value, 10);
+    const userId = parseInt(document.getElementById('testUserId').value, 10);
+    if (!socid || !userId) {
+      alert('Renseignez l\'ID du tiers de test et l\'ID utilisateur propriétaire avant de lancer ce test.');
+      return null;
+    }
+    const now = Math.floor(Date.now() / 1000);
+    return {
+      label: 'Test API depuis test-dolibarr.html',
+      type_code: 'AC_OTH_AUTO',
+      datep: now,
+      datef: now + 60,
+      socid: socid,
+      userownerid: userId,
+      note: 'Action de test générée automatiquement — peut être supprimée sans risque.',
+      percentage: 100
+    };
+  }
+  window.showCurl4 = function() {
+    const payload = buildActionPayload();
+    if (!payload) return;
+    renderResult(4, 'info', 'Commande curl prête à exécuter', null, buildCurl('POST', '/agendaevents', payload));
+  };
+  window.runTest4 = async function() {
+    const cfg = getConfig(); if (!cfg) return;
+    const payload = buildActionPayload();
+    if (!payload) return;
+    if (!confirm('Ce test va créer une vraie action CRM dans Dolibarr sur le tiers ID ' + payload.socid + '. Continuer ?')) return;
+    try {
+      const r = await callApi('POST', '/agendaevents', payload);
+      if (r.ok) {
+        const newId = r.json;
+        const deleteCmd = buildCurl('DELETE', '/agendaevents/' + newId);
+        const html = `<div class="result"><div class="result-header success">
+          <span>✓</span><span>Action CRM créée · ID = ${newId} (HTTP ${r.status})</span>
+        </div>
+        <div class="result-body"><pre>${escapeHtml(JSON.stringify({newActionId: newId, payload: payload}, null, 2))}</pre></div>
+        </div>
+        <div class="curl-label">Commande curl utilisée (création) :</div>
+        <div class="curl-block">
+          <button class="curl-copy" onclick="window.copyCurl(this)">Copier</button>
+          <code>${escapeHtml(buildCurl('POST', '/agendaevents', payload))}</code>
+        </div>
+        <div class="curl-label">Pour supprimer cette action de test :</div>
+        <div class="curl-block">
+          <button class="curl-copy" onclick="window.copyCurl(this)">Copier</button>
+          <code>${escapeHtml(deleteCmd)}</code>
+        </div>`;
+        document.getElementById('result4').innerHTML = html;
+        setStatus(4, 'success', `Action créée (ID ${newId})`);
+      } else {
+        renderResult(4, 'error', `Erreur HTTP ${r.status}`, r.text.slice(0, 1500), buildCurl('POST', '/agendaevents', payload));
+        setStatus(4, 'error', `HTTP ${r.status}`);
+      }
+    } catch (e) {
+      renderResult(4, 'warning',
+        'Appel bloqué par le navigateur (CORS ou réseau). Lancez la commande curl depuis votre terminal.',
+        e.message,
+        buildCurl('POST', '/agendaevents', payload));
+      setStatus(4, 'warning', 'Bloqué par CORS — tester en terminal');
+    }
+  };
+
+})();
+</script>
+
+</body>
+</html>

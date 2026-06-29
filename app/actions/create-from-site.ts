@@ -12,16 +12,16 @@ export async function createInterventionFromSite(sourceId: string): Promise<neve
   // Fetch source intervention
   const { data: source } = await supabase
     .from('interventions')
-    .select('dolibarr_tiers_id, client_name, client_address, client_email, plan_image_path, technician_name')
+    .select('dolibarr_tiers_id, client_name, client_address, client_email, plan_image_path, technician_name, intervention_type')
     .eq('id', sourceId)
     .eq('user_id', user.id)
     .single()
 
   if (!source) redirect('/interventions')
 
-  // Fetch source postes (positions + labels uniquement — relevés vides)
-  const { data: sourcePostes } = await supabase
-    .from('postes')
+  // Fetch source articles (positions + labels uniquement — relevés vides)
+  const { data: sourceArticles } = await supabase
+    .from('articles')
     .select('label, x, y, ordre')
     .eq('intervention_id', sourceId)
     .order('ordre')
@@ -50,6 +50,7 @@ export async function createInterventionFromSite(sourceId: string): Promise<neve
       client_address: source.client_address,
       client_email: source.client_email,
       technician_name: source.technician_name,
+      intervention_type: source.intervention_type ?? 'rats',
       status: 'draft',
     })
     .select('id')
@@ -77,10 +78,10 @@ export async function createInterventionFromSite(sourceId: string): Promise<neve
     }
   }
 
-  // Re-create postes with same positions/labels, relevés vides
-  if (sourcePostes && sourcePostes.length > 0) {
-    await supabase.from('postes').insert(
-      sourcePostes.map(p => ({
+  // Re-create articles with same positions/labels, relevés vides
+  if (sourceArticles && sourceArticles.length > 0) {
+    await supabase.from('articles').insert(
+      sourceArticles.map(p => ({
         intervention_id: newIv.id,
         label: p.label,
         x: p.x,
