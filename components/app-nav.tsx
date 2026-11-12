@@ -4,16 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const LINKS = [
-  { href: '/interventions', label: 'Interventions' },
-  { href: '/sites', label: 'Sites' },
+  { href: '/dossiers', label: 'Dossiers', gerantOnly: false },
+  { href: '/interventions', label: 'Interventions', gerantOnly: false },
+  { href: '/sites', label: 'Sites', gerantOnly: false },
+  { href: '/parametres', label: 'Paramètres', gerantOnly: true },
 ]
 
-export default function AppNav() {
+export default function AppNav({ isGerant }: { isGerant: boolean }) {
   const pathname = usePathname()
 
   return (
     <nav className="bg-white border-b border-[#e7e5e4] px-5 flex gap-1">
-      {LINKS.map(({ href, label }) => {
+      {LINKS.filter(l => isGerant || !l.gerantOnly).map(({ href, label }) => {
         const active = pathname === href || pathname.startsWith(href + '/')
         return (
           <Link

@@ -18,6 +18,15 @@ export interface PDFBiocide {
   quantite: string
 }
 
+export interface PDFZone {
+  label: string
+  niveau: string | null
+  traitement: string | null
+  constat: string | null
+  avant: string[] // images base64
+  apres: string[]
+}
+
 export type PDFSeverity = 'forte' | 'moderee' | 'inactive' | 'non-releve'
 
 export interface PDFHistoryEntry {
@@ -44,7 +53,14 @@ export interface PDFData {
   logoBase64?: string | null
   history?: PDFHistoryEntry[]
   biocides?: PDFBiocide[]
+  zones?: PDFZone[]
+  dossierRef?: string | null
+  refClient?: string | null
+  certibiocide?: string | null
 }
+
+// Mentions légales imprimées sur chaque rapport
+const LEGAL = 'SARL Parasites et Compagnie · RCS Lyon 131 874 760 · Certibiocide n° 115445'
 
 const P = '#c0392b'
 const BORDER = '#e7e5e4'
@@ -105,6 +121,19 @@ const s = StyleSheet.create({
   sigLine: { borderTop: `1 solid #1c1917`, paddingTop: 4, marginTop: 2 },
   sigName: { fontSize: 8, color: MUTED },
 
+  // Zones avant / après
+  zoneBox: { border: `1 solid ${BORDER}`, borderRadius: 4, padding: 8, marginBottom: 8 },
+  zoneHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  zoneTitle: { fontSize: 9.5, fontFamily: 'Helvetica-Bold' },
+  zoneNiveau: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', paddingVertical: 2, paddingHorizontal: 6, borderRadius: 8 },
+  zoneCols: { flexDirection: 'row', gap: 8 },
+  zoneCol: { flex: 1 },
+  zoneColTitle: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: MUTED, textTransform: 'uppercase', marginBottom: 3 },
+  zoneImgs: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  zoneImg: { width: 116, height: 87, objectFit: 'cover' },
+  zoneEmpty: { fontSize: 7.5, color: '#c7c3c0' },
+  zoneText: { fontSize: 8, color: '#44403c', marginTop: 5 },
+
   // Footer
   footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7.5, color: MUTED, borderTop: `1 solid ${BORDER}`, paddingTop: 8 },
 })
@@ -114,6 +143,10 @@ function fmt(dateStr: string) {
 }
 
 function val(v: string | null) { return v ?? '—' }
+
+const NIVEAU_LABEL: Record<string, string> = { nul: 'nulle', faible: 'faible', moyen: 'moyenne', fort: 'forte' }
+const NIVEAU_BG: Record<string, string> = { nul: '#d1f5ed', faible: '#fefce8', moyen: '#fff7ed', fort: '#fef2f2' }
+const NIVEAU_FG: Record<string, string> = { nul: '#064e44', faible: '#854d0e', moyen: '#9a3412', fort: '#b91c1c' }
 
 const SEV_COLOR: Record<PDFSeverity, string> = {
   forte: '#c0392b',
@@ -158,8 +191,14 @@ export function InterventionPDF(data: PDFData) {
         <View style={s.infoBlock}>
           <View style={s.row}><Text style={s.lbl}>Date</Text><Text style={s.val}>{fmt(data.intervention_date)}</Text></View>
           <View style={s.row}><Text style={s.lbl}>Technicien</Text><Text style={s.val}>{data.technician_name}</Text></View>
+          {data.certibiocide && (
+            <View style={s.row}><Text style={s.lbl}>N° Certibiocide</Text><Text style={s.val}>{data.certibiocide}</Text></View>
+          )}
           {data.type_intervention && (
             <View style={s.row}><Text style={s.lbl}>Type</Text><Text style={s.val}>{data.type_intervention}</Text></View>
+          )}
+          {data.dossierRef && (
+            <View style={s.row}><Text style={s.lbl}>Devis</Text><Text style={s.val}>{data.dossierRef}{data.refClient ? ` — votre réf. ${data.refClient}` : ''}</Text></View>
           )}
         </View>
 
@@ -205,6 +244,41 @@ export function InterventionPDF(data: PDFData) {
                 </View>
               ))}
             </View>
+          </>
+        )}
+
+        {/* Zones — photos avant / après */}
+        {data.zones && data.zones.length > 0 && (
+          <>
+            <Text style={s.sectionTitle}>Zones traitées</Text>
+            {data.zones.map((z, zi) => (
+              <View key={zi} style={s.zoneBox} wrap={false}>
+                <View style={s.zoneHead}>
+                  <Text style={s.zoneTitle}>{z.label}</Text>
+                  {z.niveau && (
+                    <Text style={[s.zoneNiveau, { backgroundColor: NIVEAU_BG[z.niveau] ?? BG, color: NIVEAU_FG[z.niveau] ?? MUTED }]}>
+                      Infestation : {NIVEAU_LABEL[z.niveau] ?? z.niveau}
+                    </Text>
+                  )}
+                </View>
+                <View style={s.zoneCols}>
+                  {(['avant', 'apres'] as const).map(phase => (
+                    <View key={phase} style={s.zoneCol}>
+                      <Text style={s.zoneColTitle}>{phase === 'avant' ? 'Avant' : 'Après'}</Text>
+                      {z[phase].length > 0 ? (
+                        <View style={s.zoneImgs}>
+                          {z[phase].slice(0, 2).map((img, ii) => <Image key={ii} src={img} style={s.zoneImg} />)}
+                        </View>
+                      ) : (
+                        <Text style={s.zoneEmpty}>Pas de photo</Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+                {z.traitement && <Text style={s.zoneText}>Traitement : {z.traitement}</Text>}
+                {z.constat && <Text style={s.zoneText}>Constat : {z.constat}</Text>}
+              </View>
+            ))}
           </>
         )}
 
@@ -303,8 +377,9 @@ export function InterventionPDF(data: PDFData) {
 
         {/* Footer */}
         <View style={s.footer} fixed>
-          <Text>Parasites Compagnie — {data.reference}</Text>
-          <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+          {/* Pas de numéro de page « render » : avec @react-pdf 4.5 il fait disparaître tout le pied de page */}
+          <Text>{LEGAL}</Text>
+          <Text>{data.reference}</Text>
         </View>
 
       </Page>

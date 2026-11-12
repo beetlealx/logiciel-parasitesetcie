@@ -5,6 +5,7 @@ import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
 import { generateInterventionPDF } from '@/lib/generate-pdf'
 import { createActionCRM, createTiers } from '@/lib/dolibarr'
+import { joindreAuDevis } from '@/lib/dolibarr-propal'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -64,7 +65,7 @@ function buildEmailHtml(data: {
 }
 
 export type SendResult =
-  | { ok: true; emailSent: boolean; crmCreated: boolean; tiersCreated: boolean; emailError?: string; tiersError?: string }
+  | { ok: true; emailSent: boolean; crmCreated: boolean; tiersCreated: boolean; docJoint: boolean; emailError?: string; tiersError?: string }
   | { ok: false; error: string }
 
 export async function sendReport(interventionId: string): Promise<SendResult> {
@@ -77,7 +78,6 @@ export async function sendReport(interventionId: string): Promise<SendResult> {
     .from('interventions')
     .select('reference, status, dolibarr_tiers_id, client_name, client_address, client_email, intervention_date, technician_name, type_intervention, synthese')
     .eq('id', interventionId)
-    .eq('user_id', user.id)
     .single()
 
   if (!iv) return { ok: false, error: 'Intervention introuvable' }
@@ -100,7 +100,6 @@ export async function sendReport(interventionId: string): Promise<SendResult> {
       await supabase
         .from('interventions')
         .update({ dolibarr_tiers_id: result.id })
-        .eq('user_id', user.id)
         .eq('client_name', iv.client_name)
         .is('dolibarr_tiers_id', null)
     } else {
@@ -109,7 +108,7 @@ export async function sendReport(interventionId: string): Promise<SendResult> {
   }
 
   // Generate PDF
-  const pdf = await generateInterventionPDF(interventionId, supabase, user.id)
+  const pdf = await generateInterventionPDF(interventionId, supabase)
   if (!pdf) return { ok: false, error: 'Échec de la génération du PDF' }
 
   // Send email
@@ -157,12 +156,22 @@ export async function sendReport(interventionId: string): Promise<SendResult> {
     }
   }
 
+  // PDF joint au devis Dolibarr (passages issus d'un devis signé) — non bloquant
+  let docJoint = false
+  if (pdf.dossierRef) {
+    try {
+      await joindreAuDevis(pdf.dossierRef, `${pdf.reference}.pdf`, pdf.buffer)
+      docJoint = true
+    } catch (e) {
+      console.error('[Dolibarr] joindreAuDevis error:', e)
+    }
+  }
+
   // Mark as sent
   await supabase
     .from('interventions')
     .update({ status: 'sent' })
     .eq('id', interventionId)
-    .eq('user_id', user.id)
 
-  return { ok: true, emailSent, crmCreated, tiersCreated, emailError, tiersError }
+  return { ok: true, emailSent, crmCreated, tiersCreated, docJoint, emailError, tiersError }
 }

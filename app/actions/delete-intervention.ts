@@ -10,15 +10,23 @@ export async function deleteIntervention(id: string): Promise<{ ok: boolean; err
   if (!user) redirect('/login')
 
   const [{ data: iv }, { data: photos }] = await Promise.all([
-    supabase.from('interventions').select('plan_image_path').eq('id', id).eq('user_id', user.id).single(),
+    supabase.from('interventions').select('plan_image_path').eq('id', id).single(),
     supabase.from('photos').select('storage_path').eq('intervention_id', id),
   ])
 
   if (!iv) return { ok: false, error: 'Intervention introuvable' }
 
-  const admin = createAdminClient()
+  // La RLS décide : gérant, ou auteur de l'intervention
+  const { data: deleted, error } = await supabase
+    .from('interventions')
+    .delete()
+    .eq('id', id)
+    .select('id')
 
-  // Clean up storage files in parallel (non-blocking on error)
+  if (error) return { ok: false, error: error.message }
+  if (!deleted || deleted.length === 0) return { ok: false, error: 'Suppression réservée au gérant ou à l\'auteur' }
+
+  const admin = createAdminClient()
   await Promise.all([
     iv.plan_image_path
       ? admin.storage.from('plans').remove([iv.plan_image_path]).catch(() => null)
@@ -28,12 +36,5 @@ export async function deleteIntervention(id: string): Promise<{ ok: boolean; err
       : Promise.resolve(),
   ])
 
-  const { error } = await supabase
-    .from('interventions')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id)
-
-  if (error) return { ok: false, error: error.message }
   return { ok: true }
 }

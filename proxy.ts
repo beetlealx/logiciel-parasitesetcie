@@ -1,7 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Routes appelées sans session utilisateur : elles vérifient leur propre secret.
+const PUBLIC_PREFIXES = ['/auth/callback', '/api/dolibarr/webhook', '/api/cron/']
+
 export async function proxy(request: NextRequest) {
+  if (PUBLIC_PREFIXES.some(p => request.nextUrl.pathname.startsWith(p))) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -32,7 +39,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && pathname === '/login') {
+  // ?error=… : on laisse afficher le message (et éviter une boucle si le profil est absent)
+  if (user && pathname === '/login' && !request.nextUrl.searchParams.has('error')) {
     const url = request.nextUrl.clone()
     url.pathname = '/interventions'
     return NextResponse.redirect(url)

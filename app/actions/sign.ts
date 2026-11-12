@@ -16,10 +16,10 @@ export async function signIntervention(
     .from('interventions')
     .update({
       status: 'signed',
+      planning_status: 'realise',
       signataire_nom: signataireNom.trim(),
       signature_data_url: signatureDataUrl,
     })
     .eq('id', id)
-    .eq('user_id', user.id)
     .eq('status', 'draft')
 }

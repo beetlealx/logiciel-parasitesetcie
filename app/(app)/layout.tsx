@@ -1,13 +1,9 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireProfile, displayName } from '@/lib/auth'
 import SignOutButton from '@/components/sign-out-button'
 import AppNav from '@/components/app-nav'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) redirect('/login')
+  const { profile } = await requireProfile()
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">
@@ -19,9 +15,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </span>
             <span>Parasites Compagnie</span>
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-[12.5px] text-[#78716c]">{displayName(profile)}</span>
+            <SignOutButton />
+          </div>
         </header>
-        <AppNav />
+        <AppNav isGerant={profile.role === 'gerant'} />
       </div>
       <main className="max-w-5xl mx-auto px-4 py-6">
         {children}

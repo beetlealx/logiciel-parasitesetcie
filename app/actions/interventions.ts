@@ -15,7 +15,9 @@ export interface InterventionDraft {
   client_email: string
   intervention_date: string
   technician_name: string
+  technician_id: string | null
   type_intervention: string
+  prestation_type: string | null
   synthese: string
   biocides: BiocideEntry[]
 }
@@ -34,12 +36,13 @@ export async function saveIntervention(id: string, data: InterventionDraft) {
       client_email: data.client_email || null,
       intervention_date: data.intervention_date,
       technician_name: data.technician_name,
+      technician_id: data.technician_id,
       type_intervention: data.type_intervention || null,
+      prestation_type: data.prestation_type,
       synthese: data.synthese || null,
       biocides: data.biocides,
     })
     .eq('id', id)
-    .eq('user_id', user.id)
     .eq('status', 'draft')
 
   if (error) throw new Error('Sauvegarde échouée')

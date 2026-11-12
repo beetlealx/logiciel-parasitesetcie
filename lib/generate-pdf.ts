@@ -3,7 +3,7 @@ import React from 'react'
 import fs from 'fs'
 import path from 'path'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { InterventionPDF, type PDFPhoto, type PDFHistoryEntry, type PDFSeverity } from '@/components/intervention/pdf-document'
+import { InterventionPDF, type PDFPhoto, type PDFHistoryEntry, type PDFSeverity, type PDFZone } from '@/components/intervention/pdf-document'
 
 function computeSeverity(postes: { consommation: string | null; traces: string | null }[]): PDFSeverity {
   if (postes.length === 0) return 'non-releve'
@@ -38,14 +38,12 @@ function loadLogo(): string | null {
 export async function generateInterventionPDF(
   interventionId: string,
   supabase: SupabaseClient,
-  userId: string
-): Promise<{ buffer: Buffer; reference: string } | null> {
-  const [{ data: intervention }, { data: postes }, { data: photos }] = await Promise.all([
+): Promise<{ buffer: Buffer; reference: string; dossierRef: string | null } | null> {
+  const [{ data: intervention }, { data: postes }, { data: allPhotos }, { data: zones }] = await Promise.all([
     supabase
       .from('interventions')
-      .select('reference, intervention_date, technician_name, type_intervention, client_name, client_address, client_email, synthese, biocides, signataire_nom, signature_data_url, plan_image_path, dolibarr_tiers_id')
+      .select('reference, intervention_date, technician_name, technician_id, type_intervention, client_name, client_address, client_email, synthese, biocides, signataire_nom, signature_data_url, plan_image_path, dolibarr_tiers_id, dossiers(dolibarr_propal_ref, ref_client)')
       .eq('id', interventionId)
-      .eq('user_id', userId)
       .single(),
     supabase
       .from('postes')
@@ -54,12 +52,27 @@ export async function generateInterventionPDF(
       .order('ordre'),
     supabase
       .from('photos')
-      .select('storage_path, caption')
+      .select('storage_path, caption, zone_id, phase')
       .eq('intervention_id', interventionId)
       .order('created_at'),
+    supabase
+      .from('zones')
+      .select('id, label, niveau, traitement, constat, ordre')
+      .eq('intervention_id', interventionId)
+      .order('ordre'),
   ])
 
   if (!intervention) return null
+
+  const photos = (allPhotos ?? []).filter(p => !p.zone_id)
+  const zonePhotos = (allPhotos ?? []).filter(p => !!p.zone_id)
+  const dossier = intervention.dossiers as unknown as { dolibarr_propal_ref: string; ref_client: string | null } | null
+
+  let certibiocide: string | null = null
+  if (intervention.technician_id) {
+    const { data: tech } = await supabase.from('profiles').select('certibiocide').eq('id', intervention.technician_id).maybeSingle()
+    certibiocide = tech?.certibiocide ?? null
+  }
 
   // Historique des visites précédentes pour ce site
   let history: PDFHistoryEntry[] = []
@@ -68,7 +81,6 @@ export async function generateInterventionPDF(
       .from('interventions')
       .select('reference, intervention_date, type_intervention, postes(consommation, traces)')
       .eq('dolibarr_tiers_id', intervention.dolibarr_tiers_id)
-      .eq('user_id', userId)
       .neq('id', interventionId)
       .in('status', ['signed', 'sent'])
       .order('intervention_date', { ascending: false })
@@ -90,27 +102,47 @@ export async function generateInterventionPDF(
     intervention.plan_image_path
       ? admin.storage.from('plans').createSignedUrl(intervention.plan_image_path, 300)
       : Promise.resolve({ data: null }),
-    ...(photos ?? []).map(p =>
+    ...photos.map(p =>
       admin.storage.from('photos').createSignedUrl(p.storage_path, 300)
     ),
   ])
+
+  // Photos des zones (avant / après)
+  const zoneBase64 = await Promise.all(
+    zonePhotos.map(async p => {
+      const { data } = await admin.storage.from('photos').createSignedUrl(p.storage_path, 300)
+      return data?.signedUrl ? toBase64(data.signedUrl) : null
+    }),
+  )
+  const pdfZones: PDFZone[] = (zones ?? []).map(z => {
+    const of = (phase: 'avant' | 'apres') =>
+      zonePhotos
+        .map((p, i) => ({ p, b: zoneBase64[i] }))
+        .filter(({ p, b }) => p.zone_id === z.id && (phase === 'apres' ? p.phase === 'apres' : p.phase !== 'apres') && b)
+        .map(({ b }) => b as string)
+    return { label: z.label, niveau: z.niveau, traitement: z.traitement, constat: z.constat, avant: of('avant'), apres: of('apres') }
+  })
 
   const planPostes = (postes ?? []).map(p => ({ label: p.label, x: Number(p.x), y: Number(p.y) }))
   const [planBase64, ...photoBase64s] = await Promise.all([
     planSigned.data?.signedUrl
       ? compositePlan(planSigned.data.signedUrl, planPostes)
       : Promise.resolve(null),
-    ...(photos ?? []).map((_, i) =>
+    ...photos.map((_, i) =>
       photoSigned[i]?.data?.signedUrl ? toBase64(photoSigned[i].data!.signedUrl) : Promise.resolve(null)
     ),
   ])
 
-  const pdfPhotos: PDFPhoto[] = (photos ?? [])
+  const pdfPhotos: PDFPhoto[] = photos
     .map((p, i) => ({ base64: photoBase64s[i] ?? '', caption: p.caption }))
     .filter(p => p.base64)
 
   const element = React.createElement(InterventionPDF, {
     ...intervention,
+    dossierRef: dossier?.dolibarr_propal_ref ?? null,
+    refClient: dossier?.ref_client ?? null,
+    certibiocide,
+    zones: pdfZones,
     postes: postes ?? [],
     planBase64: planBase64 ?? null,
     photos: pdfPhotos,
@@ -120,5 +152,5 @@ export async function generateInterventionPDF(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(element as any)
-  return { buffer: Buffer.from(buffer), reference: intervention.reference }
+  return { buffer: Buffer.from(buffer), reference: intervention.reference, dossierRef: dossier?.dolibarr_propal_ref ?? null }
 }

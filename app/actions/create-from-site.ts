@@ -14,7 +14,6 @@ export async function createInterventionFromSite(sourceId: string): Promise<neve
     .from('interventions')
     .select('dolibarr_tiers_id, client_name, client_address, client_email, plan_image_path, technician_name')
     .eq('id', sourceId)
-    .eq('user_id', user.id)
     .single()
 
   if (!source) redirect('/interventions')

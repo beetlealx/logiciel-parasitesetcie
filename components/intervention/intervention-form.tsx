@@ -16,6 +16,8 @@ import RelevesSection from '@/components/intervention/releves-section'
 import PhotosSection from '@/components/intervention/photos-section'
 import SyntheseSection from '@/components/intervention/synthese-section'
 import SignatureSection from '@/components/intervention/signature-section'
+import ZonesSection from '@/components/intervention/zones-section'
+import type { ZoneRow } from '@/app/actions/zones'
 import type { PosteRow, ReadingField } from '@/app/actions/plan'
 import { bulkResetReadings } from '@/app/actions/plan'
 import type { PhotoRow } from '@/app/actions/photos'
@@ -31,7 +33,11 @@ interface Intervention {
   client_email: string | null
   intervention_date: string
   technician_name: string
+  technician_id: string | null
   type_intervention: string | null
+  prestation_type: string | null
+  passage_numero: number | null
+  dossier_id: string | null
   synthese: string | null
   biocides: BiocideEntry[] | null
   plan_image_path: string | null
@@ -44,13 +50,22 @@ interface Props {
   postes: PosteRow[]
   planUrl: string
   photos: PhotoRow[]
+  zonePhotos: PhotoRow[]
+  zones: ZoneRow[]
+  module: 'rongeurs' | 'moustiques' | 'photo'
+  prestationTypes: { code: string; label: string; module: 'rongeurs' | 'moustiques' | 'photo' }[]
+  techniciens: { id: string; name: string }[]
+  dossierRef: string | null
   phraseTemplates: PhraseTemplate[]
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type SendStatus = 'idle' | 'sending' | 'sent' | 'error'
 
-export default function InterventionForm({ intervention, postes: initialPostes, planUrl, photos, phraseTemplates }: Props) {
+export default function InterventionForm({
+  intervention, postes: initialPostes, planUrl, photos, zonePhotos, zones, module: ecranInitial,
+  prestationTypes, techniciens, dossierRef, phraseTemplates,
+}: Props) {
   const router = useRouter()
   const isLocked = intervention.status !== 'draft'
   const isSigned = intervention.status === 'signed' || intervention.status === 'sent'
@@ -61,9 +76,9 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
   const [deleting, setDeleting] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
 
-  const TECHS = ['Alex', 'Fabrice'] as const
   const [customTech, setCustomTech] = useState(
-    () => intervention.technician_name !== '' && !(TECHS as readonly string[]).includes(intervention.technician_name)
+    () => !intervention.technician_id && !['', 'À attribuer'].includes(intervention.technician_name)
+      && !techniciens.some(t => t.name === intervention.technician_name)
   )
 
   function handlePosteReadingChange(id: string, field: ReadingField, value: string | null) {
@@ -83,11 +98,16 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
     client_email: intervention.client_email ?? '',
     intervention_date: intervention.intervention_date.slice(0, 10),
     technician_name: intervention.technician_name,
+    technician_id: intervention.technician_id,
     type_intervention: intervention.type_intervention ?? '',
+    prestation_type: intervention.prestation_type,
     synthese: intervention.synthese ?? '',
     biocides: intervention.biocides ?? [],
   })
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const ecran = form.prestation_type
+    ? prestationTypes.find(t => t.code === form.prestation_type)?.module ?? ecranInitial
+    : 'rongeurs'
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const savingRef = useRef(false)
@@ -159,6 +179,7 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
     else if (intervention.client_email) parts.push('Email non envoyé')
     else parts.push('Pas d\'email client')
     if (result.crmCreated) parts.push('CRM enregistré')
+    if (result.docJoint) parts.push('PDF joint au devis')
     setSendFeedback(parts.join(' · '))
     if (result.emailSent) {
       toast.success('Rapport envoyé', { description: parts.join(' · ') })
@@ -204,6 +225,14 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
             <Link href="/interventions" className="text-xs text-[#a8a29e] hover:text-primary transition-colors">
               ← Interventions
             </Link>
+            {intervention.dossier_id && (
+              <Link
+                href={`/dossiers/${intervention.dossier_id}`}
+                className="text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+              >
+                Dossier {dossierRef ?? ''}{intervention.passage_numero ? ` · passage ${intervention.passage_numero}` : ''} →
+              </Link>
+            )}
             {intervention.dolibarr_tiers_id && (
               <Link
                 href={`/sites/${intervention.dolibarr_tiers_id}`}
@@ -356,21 +385,22 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
               Technicien
             </label>
             <select
-              value={customTech ? '__autre__' : form.technician_name}
+              value={customTech ? '__autre__' : (form.technician_id ?? techniciens.find(t => t.name === form.technician_name)?.id ?? '')}
               onChange={e => {
                 if (e.target.value === '__autre__') {
                   setCustomTech(true)
-                  update({ technician_name: '' })
+                  update({ technician_name: '', technician_id: null })
                 } else {
                   setCustomTech(false)
-                  update({ technician_name: e.target.value })
+                  const t = techniciens.find(t => t.id === e.target.value)
+                  update({ technician_id: t?.id ?? null, technician_name: t?.name ?? 'À attribuer' })
                 }
               }}
               disabled={isLocked}
               className="w-full px-3 py-2.5 border border-[#d6d3d1] rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 min-h-[44px] bg-white disabled:bg-[#f5f5f4] disabled:text-[#a8a29e]"
             >
               <option value="">— Sélectionner —</option>
-              {TECHS.map(t => <option key={t} value={t}>{t}</option>)}
+              {techniciens.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               <option value="__autre__">Autre…</option>
             </select>
             {customTech && !isLocked && (
@@ -383,6 +413,22 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
                 className="mt-2 w-full px-3 py-2.5 border border-[#d6d3d1] rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 min-h-[44px]"
               />
             )}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
+              Prestation
+            </label>
+            <select
+              value={form.prestation_type ?? ''}
+              onChange={e => update({ prestation_type: e.target.value || null })}
+              disabled={isLocked || !!intervention.dossier_id}
+              className="w-full px-3 py-2.5 border border-[#d6d3d1] rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 min-h-[44px] bg-white disabled:bg-[#f5f5f4] disabled:text-[#a8a29e]"
+            >
+              <option value="">Rongeurs — plan d&apos;appâtage (par défaut)</option>
+              {prestationTypes.filter(t => t.code !== 'rongeurs').map(t => (
+                <option key={t.code} value={t.code}>{t.label}</option>
+              ))}
+            </select>
           </div>
           <div className="sm:col-span-2">
             <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
@@ -406,6 +452,18 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
         </div>
       </FormSection>
 
+      {ecran === 'photo' ? (
+        <FormSection number={2} title="Zones traitées — photos avant / après">
+          <ZonesSection
+            interventionId={intervention.id}
+            initialZones={zones}
+            initialPhotos={zonePhotos}
+            canReprendre={(intervention.passage_numero ?? 1) > 1}
+            disabled={isLocked}
+          />
+        </FormSection>
+      ) : (
+      <>
       {/* Section 2 — Plan d'implantation */}
       <FormSection number={2} title="Plan d'implantation">
         <PlanSection
@@ -427,6 +485,8 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
           disabled={isLocked}
         />
       </FormSection>
+      </>
+      )}
 
       {/* Section 4 — Biocides */}
       <FormSection number={4} title="Produits biocides utilisés">
@@ -438,7 +498,7 @@ export default function InterventionForm({ intervention, postes: initialPostes, 
       </FormSection>
 
       {/* Section 5 — Photos */}
-      <FormSection number={5} title="Photos">
+      <FormSection number={5} title={ecran === 'photo' ? 'Autres photos' : 'Photos'}>
         <PhotosSection
           interventionId={intervention.id}
           initialPhotos={photos}

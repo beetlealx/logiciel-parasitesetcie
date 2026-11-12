@@ -37,6 +37,7 @@ export default async function InterventionsPage({
   let query = supabase
     .from('interventions')
     .select('id, reference, dolibarr_tiers_id, client_name, client_address, intervention_date, technician_name, type_intervention, status')
+    .neq('planning_status', 'annule')
     .order('intervention_date', { ascending: false })
 
   if (q) {

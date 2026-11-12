@@ -9,6 +9,8 @@ export interface PhotoRow {
   storage_path: string
   caption: string | null
   url: string
+  zone_id?: string | null
+  phase?: 'avant' | 'apres' | null
 }
 
 export async function uploadPhoto(
@@ -21,6 +23,10 @@ export async function uploadPhoto(
 
   const file = formData.get('file') as File | null
   if (!file) return { error: 'Fichier manquant' }
+  // Photo rattachée à une zone (rapport avant / après) — optionnel
+  const zoneId = (formData.get('zone_id') as string | null) || null
+  const rawPhase = formData.get('phase')
+  const phase = rawPhase === 'avant' || rawPhase === 'apres' ? rawPhase : null
 
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
@@ -35,8 +41,8 @@ export async function uploadPhoto(
 
   const { data: photo, error: insertError } = await supabase
     .from('photos')
-    .insert({ intervention_id: interventionId, storage_path: path })
-    .select('id, storage_path, caption')
+    .insert({ intervention_id: interventionId, storage_path: path, zone_id: zoneId, phase })
+    .select('id, storage_path, caption, zone_id, phase')
     .single()
 
   if (insertError || !photo) {
@@ -48,7 +54,14 @@ export async function uploadPhoto(
     .from('photos')
     .createSignedUrl(path, 7200)
 
-  return { id: photo.id, storage_path: photo.storage_path, caption: photo.caption, url: signed?.signedUrl ?? '' }
+  return {
+    id: photo.id,
+    storage_path: photo.storage_path,
+    caption: photo.caption,
+    url: signed?.signedUrl ?? '',
+    zone_id: photo.zone_id,
+    phase: photo.phase,
+  }
 }
 
 export async function updatePhotoCaption(id: string, caption: string): Promise<void> {
