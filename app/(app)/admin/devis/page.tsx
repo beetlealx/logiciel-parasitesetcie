@@ -5,8 +5,8 @@ const STATUT_LABEL: Record<number, { label: string; cls: string }> = {
   0: { label: 'Brouillon', cls: 'bg-[#f5f5f4] text-[#78716c]' },
   1: { label: 'Validé',    cls: 'bg-blue-50 text-blue-700' },
   2: { label: 'Signé',     cls: 'bg-[#d1f5ed] text-[#0a5e53]' },
-  3: { label: 'Facturé',   cls: 'bg-purple-50 text-purple-700' },
-  4: { label: 'Clôturé',   cls: 'bg-[#f5f5f4] text-[#78716c]' },
+  3: { label: 'Non signé', cls: 'bg-red-50 text-red-700' },
+  4: { label: 'Facturé',   cls: 'bg-purple-50 text-purple-700' },
 }
 
 function fmt(ts: number) {

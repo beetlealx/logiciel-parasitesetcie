@@ -59,8 +59,8 @@ const STATUT_DEVIS: Record<number, { label: string; cls: string }> = {
   0: { label: 'Brouillon', cls: 'bg-[#f5f5f4] text-[#78716c]' },
   1: { label: 'Validé',    cls: 'bg-blue-50 text-blue-700' },
   2: { label: 'Signé',     cls: 'bg-green-50 text-green-700' },
-  3: { label: 'Facturé',   cls: 'bg-[#d1f5ed] text-[#0a5e53]' },
-  4: { label: 'Annulé',    cls: 'bg-red-50 text-red-600' },
+  3: { label: 'Non signé', cls: 'bg-red-50 text-red-600' },
+  4: { label: 'Facturé',   cls: 'bg-[#d1f5ed] text-[#0a5e53]' },
 }
 
 export default function CreateDolibarrDoc({

@@ -8,7 +8,11 @@ export interface PDFArticle {
 export interface PDFPhoto {
   base64: string
   caption: string | null
+  phase?: 'avant' | 'apres' | null
 }
+
+// Mentions légales imprimées en pied de chaque rapport
+const LEGAL = 'SARL Parasites et Compagnie · RCS Lyon 131 874 760 · Certibiocide n° 115445'
 
 export interface PDFBiocide {
   produit: string
@@ -191,8 +195,20 @@ const SEV_LABEL: Record<PDFSeverity, string> = {
 }
 
 export function InterventionPDF(data: PDFData) {
-  const photoRows: PDFPhoto[][] = []
-  for (let i = 0; i < data.photos.length; i += 2) photoRows.push(data.photos.slice(i, i + 2))
+  // Photos regroupées : avant traitement, après traitement, puis les autres
+  const rowsOf = (list: PDFPhoto[]) => {
+    const rows: PDFPhoto[][] = []
+    for (let i = 0; i < list.length; i += 2) rows.push(list.slice(i, i + 2))
+    return rows
+  }
+  const avecPhase = data.photos.some(p => p.phase)
+  const photoGroups: { title: string; rows: PDFPhoto[][] }[] = avecPhase
+    ? [
+        { title: 'Avant traitement', rows: rowsOf(data.photos.filter(p => p.phase === 'avant')) },
+        { title: 'Après traitement', rows: rowsOf(data.photos.filter(p => p.phase === 'apres')) },
+        { title: 'Autres photos', rows: rowsOf(data.photos.filter(p => !p.phase)) },
+      ].filter(g => g.rows.length > 0)
+    : [{ title: 'Photos', rows: rowsOf(data.photos) }].filter(g => g.rows.length > 0)
 
   const itype = data.intervention_type ?? 'rats'
   const articleCols = ARTICLE_COLUMNS[itype] ?? ARTICLE_COLUMNS.rats
@@ -370,10 +386,10 @@ export function InterventionPDF(data: PDFData) {
         )}
 
         {/* Photos */}
-        {photoRows.length > 0 && (
-          <>
-            <Text style={s.sectionTitle}>Photos</Text>
-            {photoRows.map((row, ri) => (
+        {photoGroups.map(group => (
+          <View key={group.title}>
+            <Text style={s.sectionTitle}>{group.title}</Text>
+            {group.rows.map((row, ri) => (
               <View key={ri} style={s.photoRow}>
                 <View style={s.photoCol}>
                   <Image src={row[0].base64} style={s.photoImg} />
@@ -389,8 +405,8 @@ export function InterventionPDF(data: PDFData) {
                 )}
               </View>
             ))}
-          </>
-        )}
+          </View>
+        ))}
 
         {/* Synthèse */}
         {data.synthese && (
@@ -462,8 +478,9 @@ export function InterventionPDF(data: PDFData) {
 
         {/* Footer */}
         <View style={s.footer} fixed>
-          <Text>Parasites et Compagnie — {data.reference}</Text>
-          <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+          {/* Pas de numéro de page « render » : avec @react-pdf 4.5 il fait disparaître tout le pied de page */}
+          <Text>{LEGAL}</Text>
+          <Text>{data.reference}</Text>
         </View>
 
       </Page>
