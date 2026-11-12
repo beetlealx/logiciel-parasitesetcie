@@ -49,6 +49,16 @@ const MOBILE_LINKS = [
       </svg>
     ),
   },
+  {
+    href: '/identification',
+    label: 'Identifier',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+    ),
+  },
 ]
 
 const DESKTOP_LINKS = [
@@ -57,6 +67,7 @@ const DESKTOP_LINKS = [
   { href: '/calendrier', label: 'Calendrier' },
   { href: '/contrats', label: 'Contrats' },
   { href: '/sites', label: 'Sites' },
+  { href: '/identification', label: 'Identification' },
   { href: '/admin', label: 'Administration' },
 ]
 
@@ -85,20 +96,20 @@ export default function AppNav() {
         })}
       </nav>
 
-      {/* Mobile : 5 onglets en bas (Admin accessible via desktop uniquement) */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e7e5e4] flex">
+      {/* Mobile : 5 onglets en bas */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e7e5e4] flex" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {MOBILE_LINKS.map(({ href, label, icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3.5 min-h-[64px] transition-colors ${
                 active ? 'text-primary' : 'text-[#a8a29e]'
               }`}
             >
               {icon}
-              <span className="text-[9.5px] font-medium leading-none">{label}</span>
+              <span className="text-[10px] font-medium leading-none">{label}</span>
             </Link>
           )
         })}

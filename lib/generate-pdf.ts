@@ -60,7 +60,6 @@ export async function generateInterventionPDF(
       .from('interventions')
       .select('reference, intervention_date, technician_name, type_intervention, intervention_type, extra_data, client_name, client_address, client_email, synthese, biocides, signataire_nom, signature_data_url, plan_image_path, dolibarr_tiers_id')
       .eq('id', interventionId)
-      .eq('user_id', userId)
       .single(),
     supabase
       .from('articles')
@@ -83,7 +82,6 @@ export async function generateInterventionPDF(
       .from('interventions')
       .select('id, reference, intervention_date, intervention_type')
       .eq('dolibarr_tiers_id', intervention.dolibarr_tiers_id)
-      .eq('user_id', userId)
       .neq('id', interventionId)
       .in('status', ['signed', 'sent'])
       .order('intervention_date', { ascending: false })

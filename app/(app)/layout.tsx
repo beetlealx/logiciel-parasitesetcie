@@ -14,10 +14,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-[#fafaf9]">
       <div className="sticky top-0 z-10">
         <header className="bg-white px-5 py-3.5 flex justify-between items-center border-b border-[#e7e5e4]">
-          <div className="flex items-center gap-2.5">
+          <a href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <Image src="/logo.png" alt="Parasites et Compagnie" width={36} height={36} className="rounded-lg shrink-0" />
             <span className="font-semibold text-[15px]">Parasites et Compagnie</span>
-          </div>
+          </a>
           <SignOutButton />
         </header>
         <AppNav />

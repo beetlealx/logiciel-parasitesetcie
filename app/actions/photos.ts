@@ -22,16 +22,20 @@ export async function uploadPhoto(
   const file = formData.get('file') as File | null
   if (!file) return { error: 'Fichier manquant' }
 
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
   const path = `${user.id}/${interventionId}/${filename}`
+  const contentType = file.type || 'image/jpeg'
 
   const admin = createAdminClient()
   const { error: uploadError } = await admin.storage
     .from('photos')
-    .upload(path, file, { contentType: file.type })
+    .upload(path, file, { contentType })
 
-  if (uploadError) return { error: uploadError.message }
+  if (uploadError) {
+    console.error('[uploadPhoto] storage error:', uploadError.message)
+    return { error: uploadError.message }
+  }
 
   const { data: photo, error: insertError } = await supabase
     .from('photos')

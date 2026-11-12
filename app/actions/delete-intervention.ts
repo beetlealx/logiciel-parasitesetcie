@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { deleteCalendarEvent } from '@/lib/google-calendar'
 
 export async function deleteIntervention(id: string): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient()
@@ -10,7 +11,7 @@ export async function deleteIntervention(id: string): Promise<{ ok: boolean; err
   if (!user) redirect('/login')
 
   const [{ data: iv }, { data: photos }] = await Promise.all([
-    supabase.from('interventions').select('plan_image_path').eq('id', id).eq('user_id', user.id).single(),
+    supabase.from('interventions').select('plan_image_path, google_event_id').eq('id', id).single(),
     supabase.from('photos').select('storage_path').eq('intervention_id', id),
   ])
 
@@ -32,8 +33,12 @@ export async function deleteIntervention(id: string): Promise<{ ok: boolean; err
     .from('interventions')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id)
 
   if (error) return { ok: false, error: error.message }
+
+  if (iv?.google_event_id) {
+    deleteCalendarEvent(iv.google_event_id).catch(console.error)
+  }
+
   return { ok: true }
 }

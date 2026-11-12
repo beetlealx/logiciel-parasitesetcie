@@ -27,7 +27,6 @@ export async function signIntervention(
       signature_data_url: signatureDataUrl,
     })
     .eq('id', id)
-    .eq('user_id', user.id)
     .eq('status', 'draft')
 
   if (error) return { emailSent: false, clientEmail: null }
@@ -49,7 +48,6 @@ export async function signIntervention(
       .from('interventions')
       .update({ status: 'sent' })
       .eq('id', id)
-      .eq('user_id', user.id)
   }
 
   return { emailSent: result.sent, emailError: result.error, clientEmail }

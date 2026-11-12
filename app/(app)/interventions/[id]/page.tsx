@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -8,6 +10,8 @@ import { getPhraseTemplates } from '@/app/actions/phrases'
 import { getBiocidesByType, getBiocidesByTypeRich } from '@/app/actions/biocides'
 import { getTechniciens } from '@/app/actions/techniciens'
 import { getDolibarrProducts } from '@/lib/dolibarr'
+import { getPiegesForClient } from '@/app/actions/pieges-moustiques'
+import { getAppatsForClient } from '@/app/actions/appats-letaux'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -42,6 +46,11 @@ export default async function InterventionPage({ params }: Props) {
 
   if (!intervention) notFound()
 
+  const [piegesMoustiques, appatsLetaux] = await Promise.all([
+    getPiegesForClient(intervention.dolibarr_tiers_id),
+    getAppatsForClient(intervention.dolibarr_tiers_id),
+  ])
+
   const admin = createAdminClient()
 
   // Signed URLs for plan + photos in parallel
@@ -74,6 +83,8 @@ export default async function InterventionPage({ params }: Props) {
         biocideProductsRich={biocideProductsRich}
         dolibarrProducts={dolibarrProducts}
         techniciens={techniciens.map(t => t.nom)}
+        piegesMoustiques={piegesMoustiques}
+        appatsLetaux={appatsLetaux}
       />
     </div>
   )

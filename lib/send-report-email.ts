@@ -67,7 +67,6 @@ export async function sendInterventionEmail(
     .from('interventions')
     .select('reference, client_name, client_address, client_email, intervention_date, technician_name, type_intervention, synthese')
     .eq('id', interventionId)
-    .eq('user_id', userId)
     .single()
 
   if (!iv?.client_email) return { sent: false }

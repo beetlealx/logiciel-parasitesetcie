@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Parasites et Compagnie',
     short_name: 'P&C',
     description: 'Logiciel de compte rendu d\'intervention',
-    start_url: '/interventions',
+    start_url: '/dashboard',
     display: 'standalone',
     background_color: '#fafaf9',
     theme_color: '#c0392b',

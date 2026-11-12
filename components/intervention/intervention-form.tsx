@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import ClientSearch, { type ClientData } from '@/components/interventions/client-search'
-import { saveIntervention, type InterventionDraft, type BiocideEntry } from '@/app/actions/interventions'
+import { saveIntervention, getLastInterventionForClient, importFromPreviousIntervention, setInterventionType, reopenIntervention, type InterventionDraft, type BiocideEntry, type LastInterventionSummary, type ImportResult } from '@/app/actions/interventions'
 import { sendReport } from '@/app/actions/send-report'
 import { deleteIntervention } from '@/app/actions/delete-intervention'
 import { createInterventionFromSite } from '@/app/actions/create-from-site'
@@ -16,6 +16,7 @@ import RelevesSection from '@/components/intervention/releves-section'
 import PhotosSection from '@/components/intervention/photos-section'
 import SyntheseSection from '@/components/intervention/synthese-section'
 import SignatureSection from '@/components/intervention/signature-section'
+import SharePdfButton from '@/components/intervention/share-pdf-button'
 import type { ArticleRow, ReadingField } from '@/app/actions/plan'
 import { bulkResetReadings, updateArticleReleves } from '@/app/actions/plan'
 import { INTERVENTION_TEMPLATES, type InterventionType } from '@/lib/intervention-templates'
@@ -27,6 +28,10 @@ import EtatInitialSection from '@/components/intervention/etat-initial-section'
 import ConsignesPostSection from '@/components/intervention/consignes-post-section'
 import type { PhotoRow } from '@/app/actions/photos'
 import type { PhraseTemplate } from '@/app/actions/phrases'
+import PiegesMoustiquesSection from '@/components/intervention/pieges-moustiques-section'
+import AppatsLetauxSection from '@/components/intervention/appats-letaux-section'
+import type { PiegeMoustique } from '@/app/actions/pieges-moustiques'
+import type { AppatsLetal } from '@/app/actions/appats-letaux'
 
 interface Intervention {
   id: string
@@ -62,12 +67,15 @@ interface Props {
   biocideProductsRich?: Record<string, import('@/app/actions/biocides').BiocideProduct[]>
   dolibarrProducts?: DolibarrProduct[]
   techniciens?: string[]
+  piegesMoustiques?: PiegeMoustique[]
+  appatsLetaux?: AppatsLetal[]
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type SendStatus = 'idle' | 'sending' | 'sent' | 'error'
+type ImportState = 'idle' | 'loading' | 'ready' | 'importing'
 
-export default function InterventionForm({ intervention, articles: initialArticles, planUrl, photos, phraseTemplates, biocideProducts, biocideProductsRich, dolibarrProducts, techniciens: techniciensList }: Props) {
+export default function InterventionForm({ intervention, articles: initialArticles, planUrl, photos, phraseTemplates, biocideProducts, biocideProductsRich, dolibarrProducts, techniciens: techniciensList, piegesMoustiques, appatsLetaux }: Props) {
   const router = useRouter()
   const isLocked = intervention.status !== 'draft'
   const isSigned = intervention.status === 'signed' || intervention.status === 'sent'
@@ -77,12 +85,18 @@ export default function InterventionForm({ intervention, articles: initialArticl
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
+  const [reopening, setReopening] = useState(false)
   const [dolibarrModal, setDolibarrModal] = useState(false)
   const [devisRef, setDevisRef] = useState(intervention.dolibarr_devis_ref)
   const [devisStatus, setDevisStatus] = useState(intervention.dolibarr_devis_status ?? 0)
   const [factureRef, setFactureRef] = useState(intervention.dolibarr_facture_ref)
+  const [importState, setImportState] = useState<ImportState>('idle')
+  const [lastIntervention, setLastIntervention] = useState<LastInterventionSummary | null>(null)
+  const [importRevision, setImportRevision] = useState(0)
+  const [currentPlanUrl, setCurrentPlanUrl] = useState(planUrl)
+  const [planRevision, setPlanRevision] = useState(0)
 
-  const TECHS = techniciensList ?? ['Alex', 'Fabrice']
+  const TECHS = techniciensList?.length ? techniciensList : ['Alex', 'Fabrice']
   const [customTech, setCustomTech] = useState(
     () => intervention.technician_name !== '' && !TECHS.includes(intervention.technician_name)
   )
@@ -166,6 +180,50 @@ export default function InterventionForm({ intervention, articles: initialArticl
       client_address: data.client_address,
       client_email: data.client_email,
     })
+    setLastIntervention(null)
+    setImportState('idle')
+    if (data.dolibarr_tiers_id) {
+      setImportState('loading')
+      getLastInterventionForClient(data.dolibarr_tiers_id, intervention.id).then(result => {
+        if (result.data) {
+          setLastIntervention(result.data)
+          setImportState('ready')
+        } else {
+          setImportState('idle')
+        }
+      })
+    }
+  }
+
+  async function handleTypeChange(newType: InterventionType) {
+    setItypeState(newType)
+    await setInterventionType(intervention.id, newType)
+  }
+
+  async function handleImportLast() {
+    if (!lastIntervention) return
+    setImportState('importing')
+    const result = await importFromPreviousIntervention(lastIntervention.id, intervention.id)
+    if (!result.ok) {
+      setImportState('ready')
+      toast.error(result.error ?? 'Erreur lors de l\'import')
+      return
+    }
+    // Mettre à jour l'état directement
+    if (result.articles) setArticles(result.articles as ArticleRow[])
+    if (result.planSignedUrl) {
+      setCurrentPlanUrl(result.planSignedUrl)
+      setPlanRevision(r => r + 1)
+    }
+    update({
+      biocides: (result.biocides ?? []) as BiocideEntry[],
+      synthese: result.synthese ?? '',
+      extra_data: result.extra_data ?? {},
+      type_intervention: result.type_intervention ?? '',
+    })
+    setImportRevision(r => r + 1)
+    setImportState('idle')
+    toast.success(`Données importées depuis ${lastIntervention.reference}`)
   }
 
   async function handleSend() {
@@ -223,7 +281,7 @@ export default function InterventionForm({ intervention, articles: initialArticl
     sent: 'bg-[#d1f5ed] text-[#0a5e53]',
   }
 
-  const itype: InterventionType = intervention.intervention_type ?? 'rats'
+  const [itype, setItypeState] = useState<InterventionType>(intervention.intervention_type ?? 'rats')
   const template = itype !== 'mixte' ? INTERVENTION_TEMPLATES[itype] : null
   const showPlan = template?.showPlan ?? true
   const articlesTitle = template?.articlesTitle ?? 'Postes'
@@ -235,7 +293,7 @@ export default function InterventionForm({ intervention, articles: initialArticl
       { label: 'Fourmi charpentière', img: '/especes/fourmi-charpentiere.jpg' },
       { label: 'Fourmi pharaon', img: '/especes/fourmi-pharaon.jpg' },
       { label: 'Fourmi odorante', img: '/especes/fourmi-odorante.jpg' },
-      { label: 'Fourmi de jardin', img: '/especes/fourmi-jardin.jpg' },
+      { label: 'Fourmi acrobate', img: '/especes/fourmi-acrobate.jpg' },
       { label: 'Autre', img: '' },
     ],
     frelons_guepes: [
@@ -327,28 +385,47 @@ export default function InterventionForm({ intervention, articles: initialArticl
           </button>
           {isLocked && (
             <>
-              <a
-                href={`/api/pdf/${intervention.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 border border-[#d6d3d1] text-[#57534e] text-sm px-3 py-2.5 rounded-lg font-medium hover:bg-[#f5f5f4] transition-colors min-h-[44px]"
+              <SharePdfButton
+                url={`/api/pdf/${intervention.id}`}
+                filename={`${intervention.reference}.pdf`}
+                label="Rapport"
+                icon={
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                  </svg>
+                }
+              />
+              <SharePdfButton
+                url={`/api/attestation/${intervention.id}`}
+                filename={`attestation-${intervention.reference}.pdf`}
+                label="Attestation"
+                icon={
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                  </svg>
+                }
+              />
+              <button
+                type="button"
+                disabled={reopening}
+                onClick={async () => {
+                  setReopening(true)
+                  const res = await reopenIntervention(intervention.id)
+                  if (res.ok) {
+                    router.refresh()
+                  } else {
+                    toast.error(res.error ?? 'Impossible de réouvrir')
+                    setReopening(false)
+                  }
+                }}
+                className="flex items-center gap-1.5 border border-amber-300 text-amber-700 bg-amber-50 text-sm px-3 py-2.5 rounded-lg font-medium hover:bg-amber-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                title="Repasser en brouillon pour modifier"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
-                Rapport
-              </a>
-              <a
-                href={`/api/attestation/${intervention.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 border border-[#d6d3d1] text-[#57534e] text-sm px-3 py-2.5 rounded-lg font-medium hover:bg-[#f5f5f4] transition-colors min-h-[44px]"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-                </svg>
-                Attestation
-              </a>
+                {reopening ? 'Réouverture…' : 'Réouvrir'}
+              </button>
             </>
           )}
           {form.dolibarr_tiers_id && (
@@ -426,6 +503,67 @@ export default function InterventionForm({ intervention, articles: initialArticl
         />
       </FormSection>
 
+      {/* Bandeau dernier passage */}
+      {!isLocked && importState === 'loading' && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-[#fafaf9] border border-[#e7e5e4] rounded-xl text-sm text-[#78716c]">
+          <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg>
+          Recherche du dernier passage…
+        </div>
+      )}
+      {!isLocked && importState === 'ready' && lastIntervention && (() => {
+        const nbBiocides = lastIntervention.biocides?.length ?? 0
+        const hasSynthese = !!lastIntervention.synthese
+        const hasPlan = !!lastIntervention.plan_image_path
+        const nbArticles = lastIntervention.articles_count
+        const nbPhotos = lastIntervention.photos_count
+        const chips = [
+          nbBiocides > 0 && `${nbBiocides} biocide${nbBiocides > 1 ? 's' : ''}`,
+          hasSynthese && 'Synthèse',
+          hasPlan && nbArticles > 0 && `Plan (${nbArticles} poste${nbArticles > 1 ? 's' : ''})`,
+          nbPhotos > 0 && `${nbPhotos} photo${nbPhotos > 1 ? 's' : ''}`,
+        ].filter(Boolean) as string[]
+        return (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 space-y-2">
+            <div className="flex items-start gap-2 text-sm text-blue-800">
+              <svg className="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              <span>
+                Dernier passage le{' '}
+                <strong>{new Date(lastIntervention.intervention_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</strong>
+                {lastIntervention.intervention_type && ` — ${lastIntervention.intervention_type}`}
+                {' · '}
+                <Link href={`/interventions/${lastIntervention.id}`} className="underline underline-offset-2" target="_blank">
+                  {lastIntervention.reference}
+                </Link>
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {chips.length > 0 ? chips.map(c => (
+                  <span key={c} className="inline-flex items-center text-[11px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">{c}</span>
+                )) : (
+                  <span className="text-[12px] text-[#a8a29e]">Aucune donnée disponible dans ce passage</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleImportLast}
+                disabled={chips.length === 0}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Importer tout
+              </button>
+            </div>
+          </div>
+        )
+      })()}
+      {!isLocked && importState === 'importing' && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+          <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg>
+          Import en cours — plan, postes, photos, biocides, synthèse…
+        </div>
+      )}
+
       {/* Section — Informations générales */}
       <FormSection number={S()} title="Informations générales">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -474,27 +612,25 @@ export default function InterventionForm({ intervention, articles: initialArticl
               />
             )}
           </div>
-          {itype === 'rats' && (
-            <div className="sm:col-span-2">
-              <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
-                Type d'intervention
-              </label>
-              <select
-                value={form.type_intervention}
-                onChange={e => update({ type_intervention: e.target.value })}
-                disabled={isLocked}
-                className="w-full px-3 py-2.5 border border-[#d6d3d1] rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 min-h-[44px] bg-white disabled:bg-[#f5f5f4] disabled:text-[#a8a29e]"
-              >
-                <option value="">— Sélectionner —</option>
-                <option value="Dératisation">Dératisation</option>
-                <option value="Désinsectisation">Désinsectisation</option>
-                <option value="Désinfection">Désinfection</option>
-                <option value="Traitement préventif">Traitement préventif</option>
-                <option value="Traitement curatif">Traitement curatif</option>
-                <option value="Autre">Autre</option>
-              </select>
-            </div>
-          )}
+          <div className="sm:col-span-2">
+            <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
+              Nuisible traité
+            </label>
+            <select
+              value={itype}
+              onChange={e => handleTypeChange(e.target.value as InterventionType)}
+              disabled={isLocked}
+              className="w-full px-3 py-2.5 border border-[#d6d3d1] rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 min-h-[44px] bg-white disabled:bg-[#f5f5f4] disabled:text-[#a8a29e]"
+            >
+              <option value="rats">Rongeurs</option>
+              <option value="fourmis">Fourmis</option>
+              <option value="cafards">Cafards</option>
+              <option value="punaises_lit">Punaises de lit - Puces</option>
+              <option value="frelons_guepes">Frelons / Guêpes</option>
+              <option value="moustiques">Moustiques</option>
+              <option value="mixte">Mixte</option>
+            </select>
+          </div>
           {ESPECES[itype] && (
             <div className="sm:col-span-2">
               <label className="block text-[11px] uppercase tracking-wide text-[#a8a29e] font-medium mb-1.5">
@@ -537,12 +673,13 @@ export default function InterventionForm({ intervention, articles: initialArticl
       {showPlan && (
         <FormSection number={S()} title={articlesTitle}>
           <PlanSection
+            key={planRevision}
             interventionId={intervention.id}
             interventionType={itype}
             articles={articles}
             onArticlesChange={setArticles}
             initialPlanPath={intervention.plan_image_path}
-            initialPlanUrl={planUrl}
+            initialPlanUrl={currentPlanUrl}
             disabled={isLocked}
           />
         </FormSection>
@@ -574,9 +711,38 @@ export default function InterventionForm({ intervention, articles: initialArticl
         </FormSection>
       )}
 
+      {/* Section — Pièges moustiques (type moustiques uniquement) */}
+      {itype === 'moustiques' && (
+        <FormSection number={S()} title="Pièges anti-moustiques">
+          <PiegesMoustiquesSection
+            interventionId={intervention.id}
+            interventionDate={form.intervention_date}
+            dolibarrTiersId={form.dolibarr_tiers_id}
+            clientName={form.client_name}
+            clientAddress={form.client_address || null}
+            initialPieges={piegesMoustiques ?? []}
+            disabled={isLocked}
+          />
+        </FormSection>
+      )}
+
+      {/* Section — Appâts létaux (toujours visible) */}
+      <FormSection number={S()} title="Appâts létaux — rongeurs">
+        <AppatsLetauxSection
+          interventionId={intervention.id}
+          interventionDate={form.intervention_date}
+          dolibarrTiersId={form.dolibarr_tiers_id}
+          clientName={form.client_name}
+          clientAddress={form.client_address || null}
+          initialAppats={appatsLetaux ?? []}
+          disabled={isLocked}
+        />
+      </FormSection>
+
       {/* Section — Biocides */}
       <FormSection number={S()} title="Produits biocides utilisés">
         <BiocidesSection
+          key={importRevision}
           value={form.biocides}
           onChange={v => update({ biocides: v })}
           disabled={isLocked}
@@ -609,6 +775,7 @@ export default function InterventionForm({ intervention, articles: initialArticl
       {/* Section — Synthèse */}
       <FormSection number={S()} title="Synthèse">
         <SyntheseSection
+          key={importRevision}
           value={form.synthese}
           onChange={v => update({ synthese: v })}
           phraseTemplates={phraseTemplates}

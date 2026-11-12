@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const publicPaths = ['/login', '/reset-password', '/auth/callback', '/portail']
+  const publicPaths = ['/login', '/reset-password', '/auth/callback', '/portail', '/api/calendrier/ics', '/api/google-calendar', '/api/cron']
   const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()

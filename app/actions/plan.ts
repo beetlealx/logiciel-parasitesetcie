@@ -29,7 +29,6 @@ export async function uploadPlanImage(
     .from('interventions')
     .update({ plan_image_path: path })
     .eq('id', interventionId)
-    .eq('user_id', user.id)
 
   const { data: signed } = await admin.storage
     .from('plans')

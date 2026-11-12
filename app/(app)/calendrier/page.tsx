@@ -16,19 +16,44 @@ function isoDate(d: Date) {
   return d.toISOString().split('T')[0]
 }
 
+function getMondayOf(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d
+}
+
 export default async function CalendrierPage({
   searchParams,
 }: {
-  searchParams: Promise<{ m?: string; tech?: string }>
+  searchParams: Promise<{ m?: string; tech?: string; v?: string; w?: string }>
 }) {
-  const { m, tech } = await searchParams
+  const { m, tech, v, w } = await searchParams
+  const view = v === 'week' ? 'week' : 'month'
   const now = new Date()
-  const [year, month] = m
-    ? m.split('-').map(Number)
-    : [now.getFullYear(), now.getMonth() + 1]
 
-  const start = new Date(year, month - 1, 1).toISOString().split('T')[0]
-  const end   = new Date(year, month, 0).toISOString().split('T')[0]
+  let year: number, month: number, start: string, end: string, weekStart: string | undefined
+
+  if (view === 'week') {
+    const baseDate = w ? new Date(w) : now
+    const monday = getMondayOf(baseDate)
+    weekStart = isoDate(monday)
+    year = monday.getFullYear()
+    month = monday.getMonth() + 1
+    start = weekStart
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    end = isoDate(sunday)
+  } else {
+    weekStart = undefined
+    const [y, mo] = m
+      ? m.split('-').map(Number)
+      : [now.getFullYear(), now.getMonth() + 1]
+    year = y; month = mo
+    start = new Date(year, month - 1, 1).toISOString().split('T')[0]
+    end = new Date(year, month, 0).toISOString().split('T')[0]
+  }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -38,25 +63,21 @@ export default async function CalendrierPage({
       .from('interventions')
       .select('id, reference, intervention_date, client_name, intervention_type, status, technician_name')
       .gte('intervention_date', start)
-      .lte('intervention_date', end)
+      .lte('intervention_date', end + 'T23:59:59')
       .order('intervention_date'),
     user
       ? supabase
           .from('contrats')
           .select('id, client_name, intervention_type, frequence, date_debut, dolibarr_tiers_id')
-          .eq('user_id', user.id)
           .eq('actif', true)
       : Promise.resolve({ data: [] }),
     getTechniciens(true),
   ])
 
-  // Filter by technician if selected
   const interventions = tech
     ? (interventionsRaw ?? []).filter(iv => iv.technician_name === tech)
     : (interventionsRaw ?? [])
 
-  // For each active contract, compute next visit date
-  // Get last signed/sent intervention date per tiers+type
   const contractVisits: Array<{ id: string; date: string; client_name: string; intervention_type: string }> = []
 
   if (contrats && contrats.length > 0) {
@@ -73,7 +94,6 @@ export default async function CalendrierPage({
           .order('intervention_date', { ascending: false })
       : { data: [] }
 
-    // Index: tiers_id+type → last date
     const lastDateMap: Record<string, string> = {}
     for (const iv of lastIvs ?? []) {
       const key = `${iv.dolibarr_tiers_id}::${iv.intervention_type}`
@@ -82,21 +102,13 @@ export default async function CalendrierPage({
 
     for (const c of contrats) {
       const key = `${c.dolibarr_tiers_id}::${c.intervention_type}`
-      const lastDate = lastDateMap[key]
-        ? new Date(lastDateMap[key])
-        : new Date(c.date_debut)
+      const lastDate = lastDateMap[key] ? new Date(lastDateMap[key]) : new Date(c.date_debut)
       const freqMonths = FREQ_MONTHS[c.frequence] ?? 3
       const nextVisit = addMonths(lastDate, freqMonths)
       const dateStr = isoDate(nextVisit)
 
-      // Only show if within the displayed month
       if (dateStr >= start && dateStr <= end) {
-        contractVisits.push({
-          id: c.id,
-          date: dateStr,
-          client_name: c.client_name,
-          intervention_type: c.intervention_type,
-        })
+        contractVisits.push({ id: c.id, date: dateStr, client_name: c.client_name, intervention_type: c.intervention_type })
       }
     }
   }
@@ -107,6 +119,8 @@ export default async function CalendrierPage({
       contractVisits={contractVisits}
       year={year}
       month={month}
+      view={view}
+      weekStart={weekStart}
       techniciens={techniciensList.map(t => t.nom)}
       selectedTech={tech ?? ''}
     />

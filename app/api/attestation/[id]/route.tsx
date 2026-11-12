@@ -21,7 +21,6 @@ export async function GET(
     .from('interventions')
     .select('reference, intervention_date, technician_name, type_intervention, client_name, client_address, biocides, status')
     .eq('id', id)
-    .eq('user_id', user.id)
     .single()
 
   if (!intervention) return NextResponse.json({ error: 'Introuvable' }, { status: 404 })

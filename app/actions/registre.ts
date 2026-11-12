@@ -28,7 +28,6 @@ export async function getRegistreEntries(annee?: number): Promise<RegistreEntry[
   let query = supabase
     .from('interventions')
     .select('id, reference, intervention_date, client_name, client_address, technician_name, type_intervention, biocides')
-    .eq('user_id', user.id)
     .neq('status', 'draft')
     .not('biocides', 'is', null)
     .order('intervention_date', { ascending: false })

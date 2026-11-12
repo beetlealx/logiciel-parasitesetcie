@@ -19,7 +19,6 @@ export async function sendReport(interventionId: string): Promise<SendResult> {
     .from('interventions')
     .select('reference, status, dolibarr_tiers_id, client_name, client_address, client_email, intervention_date, technician_name, type_intervention, synthese')
     .eq('id', interventionId)
-    .eq('user_id', user.id)
     .single()
 
   if (!iv) return { ok: false, error: 'Intervention introuvable' }
@@ -42,7 +41,6 @@ export async function sendReport(interventionId: string): Promise<SendResult> {
       await supabase
         .from('interventions')
         .update({ dolibarr_tiers_id: result.id })
-        .eq('user_id', user.id)
         .eq('client_name', iv.client_name)
         .is('dolibarr_tiers_id', null)
     } else {
@@ -84,7 +82,6 @@ export async function sendReport(interventionId: string): Promise<SendResult> {
     .from('interventions')
     .update({ status: 'sent' })
     .eq('id', interventionId)
-    .eq('user_id', user.id)
 
   return { ok: true, emailSent, crmCreated, tiersCreated, emailError, tiersError }
 }

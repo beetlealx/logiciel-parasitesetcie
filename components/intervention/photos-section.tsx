@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { toast } from 'sonner'
 import { uploadPhoto, updatePhotoCaption, deletePhoto, type PhotoRow } from '@/app/actions/photos'
 
 interface Props {
@@ -23,12 +24,26 @@ export default function PhotosSection({ interventionId, initialPhotos, disabled 
     setUploading(true)
     setProgress({ done: 0, total: files.length })
 
+    let errors = 0
     for (let i = 0; i < files.length; i++) {
       const fd = new FormData()
       fd.append('file', files[i])
       const result = await uploadPhoto(interventionId, fd)
-      if ('id' in result) setPhotos(ps => [...ps, result])
+      if ('id' in result) {
+        setPhotos(ps => [...ps, result])
+      } else {
+        errors++
+        console.error('[photo upload]', result.error)
+      }
       setProgress({ done: i + 1, total: files.length })
+    }
+    if (errors > 0) {
+      toast.error(
+        errors === files.length
+          ? 'Impossible d\'envoyer les photos'
+          : `${errors} photo${errors > 1 ? 's' : ''} non envoyée${errors > 1 ? 's' : ''}`,
+        { description: 'Vérifiez votre connexion et réessayez.' }
+      )
     }
 
     setUploading(false)

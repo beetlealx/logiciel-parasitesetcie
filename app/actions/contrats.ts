@@ -33,7 +33,7 @@ export async function updateContrat(id: string, payload: Partial<ContratPayload>
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non autorisé' }
 
-  const { error } = await supabase.from('contrats').update(payload).eq('id', id).eq('user_id', user.id)
+  const { error } = await supabase.from('contrats').update(payload).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/contrats')
   revalidatePath(`/contrats/${id}`)
@@ -45,7 +45,7 @@ export async function deleteContrat(id: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non autorisé' }
 
-  const { error } = await supabase.from('contrats').delete().eq('id', id).eq('user_id', user.id)
+  const { error } = await supabase.from('contrats').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/contrats')
   return { ok: true }

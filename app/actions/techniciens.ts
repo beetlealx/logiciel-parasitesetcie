@@ -21,7 +21,6 @@ export async function getTechniciens(actifOnly = false): Promise<Technicien[]> {
   let query = supabase
     .from('techniciens')
     .select('id, nom, telephone, email, numero_certibiocide, certibiocide_expire, actif')
-    .eq('user_id', user.id)
     .order('nom')
 
   if (actifOnly) query = query.eq('actif', true)
@@ -48,7 +47,7 @@ export async function upsertTechnicien(
   }
 
   const { error } = payload.id
-    ? await supabase.from('techniciens').update(row).eq('id', payload.id).eq('user_id', user.id)
+    ? await supabase.from('techniciens').update(row).eq('id', payload.id)
     : await supabase.from('techniciens').insert(row)
 
   if (error) return { error: error.message }
@@ -60,6 +59,6 @@ export async function deleteTechnicien(id: string): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
-  await supabase.from('techniciens').delete().eq('id', id).eq('user_id', user.id)
+  await supabase.from('techniciens').delete().eq('id', id)
   revalidatePath('/admin/techniciens')
 }

@@ -37,6 +37,21 @@ export async function inviteUser(email: string): Promise<{ ok: boolean; error?: 
   return { ok: true }
 }
 
+export async function deleteUser(id: string): Promise<{ ok: boolean; error?: string }> {
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.deleteUser(id)
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
+}
+
+export async function setUserPassword(id: string, password: string): Promise<{ ok: boolean; error?: string }> {
+  if (password.length < 8) return { ok: false, error: 'Le mot de passe doit contenir au moins 8 caractères.' }
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.updateUserById(id, { password })
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
+}
+
 export async function sendPasswordReset(email: string): Promise<{ ok: boolean; error?: string }> {
   const admin = createAdminClient()
   const { data, error } = await admin.auth.admin.generateLink({

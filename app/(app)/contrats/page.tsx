@@ -49,7 +49,6 @@ export default async function ContratsPage() {
   const { data: contrats } = await supabase
     .from('contrats')
     .select('*')
-    .eq('user_id', user.id)
     .eq('actif', true)
     .order('client_name')
 
