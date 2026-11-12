@@ -9,6 +9,7 @@ export interface PhotoRow {
   storage_path: string
   caption: string | null
   url: string
+  phase?: 'avant' | 'apres' | null
 }
 
 export async function uploadPhoto(
@@ -67,4 +68,12 @@ export async function deletePhoto(id: string, storagePath: string): Promise<void
     supabase.from('photos').delete().eq('id', id),
     admin.storage.from('photos').remove([storagePath]),
   ])
+}
+
+/** Photo « avant » ou « après » traitement (null = photo simple). */
+export async function updatePhotoPhase(id: string, phase: 'avant' | 'apres' | null): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  await supabase.from('photos').update({ phase }).eq('id', id)
 }

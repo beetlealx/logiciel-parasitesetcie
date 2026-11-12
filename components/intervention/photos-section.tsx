@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { toast } from 'sonner'
-import { uploadPhoto, updatePhotoCaption, deletePhoto, type PhotoRow } from '@/app/actions/photos'
+import { uploadPhoto, updatePhotoCaption, updatePhotoPhase, deletePhoto, type PhotoRow } from '@/app/actions/photos'
 
 interface Props {
   interventionId: string
@@ -54,6 +54,11 @@ export default function PhotosSection({ interventionId, initialPhotos, disabled 
     await updatePhotoCaption(id, caption)
   }
 
+  async function handlePhaseChange(id: string, phase: 'avant' | 'apres' | null) {
+    setPhotos(ps => ps.map(p => p.id === id ? { ...p, phase } : p))
+    await updatePhotoPhase(id, phase)
+  }
+
   async function handleDelete(id: string, storagePath: string) {
     setPhotos(ps => ps.filter(p => p.id !== id))
     await deletePhoto(id, storagePath)
@@ -102,6 +107,7 @@ export default function PhotosSection({ interventionId, initialPhotos, disabled 
               photo={photo}
               disabled={disabled}
               onCaptionChange={(caption) => handleCaptionChange(photo.id, caption)}
+              onPhaseChange={(phase) => handlePhaseChange(photo.id, phase)}
               onDelete={() => handleDelete(photo.id, photo.storage_path)}
             />
           ))}
@@ -119,11 +125,13 @@ function PhotoCard({
   photo,
   disabled,
   onCaptionChange,
+  onPhaseChange,
   onDelete,
 }: {
   photo: PhotoRow
   disabled?: boolean
   onCaptionChange: (caption: string) => void
+  onPhaseChange: (phase: 'avant' | 'apres' | null) => void
   onDelete: () => void
 }) {
   const [caption, setCaption] = useState(photo.caption ?? '')
@@ -162,6 +170,25 @@ function PhotoCard({
             )}
           </button>
         )}
+      </div>
+
+      {/* Avant / après traitement */}
+      <div className="grid grid-cols-2 border-t border-[#f5f5f4]">
+        {(['avant', 'apres'] as const).map(ph => (
+          <button
+            key={ph}
+            type="button"
+            disabled={disabled}
+            onClick={() => onPhaseChange(photo.phase === ph ? null : ph)}
+            className={`text-[11.5px] font-medium py-1.5 min-h-[32px] transition-colors ${
+              photo.phase === ph
+                ? ph === 'avant' ? 'bg-amber-50 text-amber-800' : 'bg-[#d1f5ed] text-[#064e44]'
+                : 'text-[#a8a29e] hover:text-[#57534e]'
+            } ${ph === 'apres' ? 'border-l border-[#f5f5f4]' : ''}`}
+          >
+            {ph === 'avant' ? 'Avant' : 'Après'}
+          </button>
+        ))}
       </div>
 
       {/* Caption */}

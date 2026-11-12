@@ -68,7 +68,7 @@ export async function generateInterventionPDF(
       .order('ordre'),
     supabase
       .from('photos')
-      .select('storage_path, caption')
+      .select('storage_path, caption, phase')
       .eq('intervention_id', interventionId)
       .order('created_at'),
   ])
@@ -133,7 +133,7 @@ export async function generateInterventionPDF(
   ])
 
   const pdfPhotos: PDFPhoto[] = (photos ?? [])
-    .map((p, i) => ({ base64: photoBase64s[i] ?? '', caption: p.caption }))
+    .map((p, i) => ({ base64: photoBase64s[i] ?? '', caption: p.caption, phase: p.phase ?? null }))
     .filter(p => p.base64)
 
   const element = React.createElement(InterventionPDF, {

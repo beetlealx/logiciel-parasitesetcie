@@ -34,7 +34,7 @@ export default async function InterventionPage({ params }: Props) {
       .order('ordre'),
     supabase
       .from('photos')
-      .select('id, storage_path, caption')
+      .select('id, storage_path, caption, phase')
       .eq('intervention_id', id)
       .order('created_at'),
     getPhraseTemplates(),
@@ -68,6 +68,7 @@ export default async function InterventionPage({ params }: Props) {
     id: p.id,
     storage_path: p.storage_path,
     caption: p.caption,
+    phase: p.phase ?? null,
     url: photoResults[i]?.data?.signedUrl ?? '',
   }))
 
