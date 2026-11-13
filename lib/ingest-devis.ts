@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createCalendarEvent } from '@/lib/google-calendar'
+import { envoyerProtocole, PROTOCOLES } from '@/lib/protocoles'
 import { getLabel, type InterventionType } from '@/lib/intervention-templates'
 import {
   estSigne,
@@ -172,6 +173,7 @@ export async function creerPassages(
     if (!type || dejaLa.has(code)) continue
 
     const dates = datesPassages(signedAt, type.schedule_offsets)
+    let premierePassage: string | null = null
     for (let i = 0; i < dates.length; i++) {
       const date = dates[i]
       const label = dates.length > 1 ? `${type.label} — passage ${i + 1}/${dates.length}` : type.label
@@ -193,6 +195,7 @@ export async function creerPassages(
         passage_numero: i + 1,
         dolibarr_lines: lignesFacturables(dossier, code, code === premier, i + 1, dates.length),
       }, date)
+      if (i === 0) premierePassage = iv.id
 
       // Agenda Google (comme une création manuelle) — non bloquant
       try {
@@ -210,6 +213,16 @@ export async function creerPassages(
         console.error('[devis-signes] agenda:', e)
       }
       total++
+    }
+
+    // Fiche de préparation envoyée au client dès la signature (une fois par nuisible) — non bloquant
+    if (premierePassage && dossier.client_email && PROTOCOLES[code]) {
+      try {
+        const r = await envoyerProtocole(admin, premierePassage)
+        if (!r.ok) console.error('[devis-signes] protocole:', r.error)
+      } catch (e) {
+        console.error('[devis-signes] protocole:', e)
+      }
     }
   }
   return total

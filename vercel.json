@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/sync-devis",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/protocoles",
+      "schedule": "0 6 * * *"
     }
   ]
 }

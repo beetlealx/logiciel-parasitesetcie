@@ -22,6 +22,8 @@ import { bulkResetReadings, updateArticleReleves } from '@/app/actions/plan'
 import { INTERVENTION_TEMPLATES, type InterventionType } from '@/lib/intervention-templates'
 import EspeceSection from '@/components/intervention/espece-section'
 import CreateDolibarrDoc from '@/components/intervention/create-dolibarr-doc'
+import ProtocoleButton from '@/components/intervention/protocole-button'
+import { PROTOCOLES, protocoleUrl } from '@/lib/protocoles-data'
 import type { DolibarrProduct, DocLine } from '@/lib/dolibarr'
 import ConditionsInterventionSection from '@/components/intervention/conditions-intervention-section'
 import EtatInitialSection from '@/components/intervention/etat-initial-section'
@@ -55,6 +57,7 @@ interface Intervention {
   dolibarr_devis_status: number | null
   dolibarr_facture_ref: string | null
   dolibarr_lines: unknown[] | null
+  protocole_envoye_at?: string | null
 }
 
 interface Props {
@@ -490,6 +493,16 @@ export default function InterventionForm({ intervention, articles: initialArticl
       </div>
 
       {/* Section — Client */}
+      {PROTOCOLES[itype] && (
+        <ProtocoleButton
+          interventionId={intervention.id}
+          titre={PROTOCOLES[itype].titre}
+          url={protocoleUrl(itype) ?? '#'}
+          clientEmail={form.client_email || null}
+          envoyeAt={intervention.protocole_envoye_at ?? null}
+        />
+      )}
+
       <FormSection number={S()} title="Client">
         <ClientSearch
           initialData={{
@@ -726,7 +739,8 @@ export default function InterventionForm({ intervention, articles: initialArticl
         </FormSection>
       )}
 
-      {/* Section — Appâts létaux (toujours visible) */}
+      {/* Section — Appâts létaux : rongeurs (ou multi-nuisibles), ou si des appâts existent déjà */}
+      {(itype === 'rats' || itype === 'mixte' || (appatsLetaux?.length ?? 0) > 0) && (
       <FormSection number={S()} title="Appâts létaux — rongeurs">
         <AppatsLetauxSection
           interventionId={intervention.id}
@@ -738,6 +752,7 @@ export default function InterventionForm({ intervention, articles: initialArticl
           disabled={isLocked}
         />
       </FormSection>
+      )}
 
       {/* Section — Biocides */}
       <FormSection number={S()} title="Produits biocides utilisés">

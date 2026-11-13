@@ -24,7 +24,7 @@ export default async function InterventionPage({ params }: Props) {
   const [{ data: intervention }, { data: rawArticles }, { data: rawPhotos }, phraseTemplates, biocideProducts, dolibarrProducts, biocideProductsRich, techniciens] = await Promise.all([
     supabase
       .from('interventions')
-      .select('id, reference, status, dolibarr_tiers_id, client_name, client_address, client_email, intervention_date, technician_name, intervention_type, type_intervention, synthese, biocides, plan_image_path, signature_data_url, signataire_nom, extra_data, dolibarr_devis_ref, dolibarr_devis_status, dolibarr_facture_ref, dolibarr_lines')
+      .select('id, reference, status, dolibarr_tiers_id, client_name, client_address, client_email, intervention_date, technician_name, intervention_type, type_intervention, synthese, biocides, plan_image_path, signature_data_url, signataire_nom, extra_data, dolibarr_devis_ref, dolibarr_devis_status, dolibarr_facture_ref, dolibarr_lines, protocole_envoye_at')
       .eq('id', id)
       .single(),
     supabase
