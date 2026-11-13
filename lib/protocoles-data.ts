@@ -8,7 +8,11 @@ export const PROTOCOLES: Record<string, { fichier: string; titre: string }> = {
   fourmis:        { fichier: 'protocole-fourmis.pdf',          titre: 'Fourmis' },
   frelons_guepes: { fichier: 'protocole-frelons-guepes.pdf',   titre: 'Frelons & guêpes' },
   moustiques:     { fichier: 'protocole-moustique-tigre.pdf',  titre: 'Moustique tigre' },
+  mixte:          { fichier: 'protocole-multi-nuisibles.pdf',  titre: 'Multi-nuisibles' },
 }
+
+// Fiches disponibles sans type d'intervention dédié (envoi manuel / lien direct) :
+// protocole-fouines.pdf, protocole-diogene.pdf, protocole-insectes-du-bois.pdf
 
 function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || 'https://logiciel-parasitesetcie.vercel.app').replace(/\/$/, '')
