@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Logiciel de compte rendu d\'intervention',
     start_url: '/dashboard',
     display: 'standalone',
-    background_color: '#fafaf9',
+    background_color: '#fdf6ea',
     theme_color: '#c0392b',
     orientation: 'portrait',
     icons: [

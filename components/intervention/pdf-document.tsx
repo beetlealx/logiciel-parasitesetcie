@@ -234,7 +234,7 @@ export function InterventionPDF(data: PDFData) {
         <View style={s.header} fixed>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {data.logoBase64 && (
-              <Image src={data.logoBase64} style={{ height: 36, width: 36, objectFit: 'contain' }} />
+              <Image src={data.logoBase64} style={{ height: 44, width: 44, objectFit: 'contain' }} />
             )}
             <View>
               <Text style={s.company}>Parasites et Compagnie</Text>

@@ -34,7 +34,7 @@ export default async function PortailPage({ params }: { params: Promise<{ token:
     <div className="min-h-screen bg-[#fafaf9]">
       {/* Header */}
       <header className="bg-white border-b border-[#e7e5e4] px-5 py-4 flex items-center gap-3">
-        <Image src="/logo.png" alt="Parasites et Compagnie" width={36} height={36} className="rounded-lg shrink-0" />
+        <Image src="/logo.png" alt="Parasites et Compagnie" width={40} height={41} className="shrink-0 object-contain" />
         <div>
           <div className="font-semibold text-[15px] text-[#1c1917]">Parasites et Compagnie</div>
           <div className="text-[12px] text-[#78716c]">Portail client</div>

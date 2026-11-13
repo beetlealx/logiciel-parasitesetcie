@@ -40,11 +40,8 @@ export default function LoginPage() {
 
   const Logo = () => (
     <div className="flex flex-col items-center gap-3 mb-8">
-      <Image src="/logo.png" alt="Parasites et Compagnie" width={96} height={96} className="rounded-2xl" />
-      <div className="text-center">
-        <div className="font-semibold text-[15px]">Parasites et Compagnie</div>
-        <div className="text-xs text-[#57534e]">Compte rendu d'intervention</div>
-      </div>
+      <Image src="/logo-horizontal.png" alt="Parasites & Cie — Objectif zéro nuisance" width={300} height={100} className="w-[300px] max-w-full h-auto" priority />
+      <div className="text-xs text-[#57534e]">Compte rendu d'intervention</div>
     </div>
   )
 

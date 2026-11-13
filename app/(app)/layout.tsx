@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="sticky top-0 z-10">
         <header className="bg-white px-5 py-3.5 flex justify-between items-center border-b border-[#e7e5e4]">
           <a href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <Image src="/logo.png" alt="Parasites et Compagnie" width={36} height={36} className="rounded-lg shrink-0" />
+            <Image src="/logo.png" alt="Parasites et Compagnie" width={40} height={41} className="shrink-0 object-contain" priority />
             <span className="font-semibold text-[15px]">Parasites et Compagnie</span>
           </a>
           <SignOutButton />
